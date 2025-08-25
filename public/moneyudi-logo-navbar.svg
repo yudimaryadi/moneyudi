@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="640" height="160" viewBox="0 0 640 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Mark -->
+  <rect x="16" y="16" width="96" height="96" rx="22" fill="#111827"/>
+  <text x="40" y="86" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="800" font-size="56" fill="#FFFFFF">MY</text>
+  <!-- Word -->
+  <text x="132" y="88" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="800" font-size="48" fill="#111827">Mone</text>
+  <text x="316" y="88" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="48" fill="#10B981">Yudi</text>
+</svg>
