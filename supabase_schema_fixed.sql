@@ -35,6 +35,16 @@ create table if not exists public.transactions (
 );
 create index if not exists idx_transactions_user_date on public.transactions(user_id, date desc);
 
+-- User Settings
+create table if not exists public.user_settings (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles(id) on delete cascade unique,
+  monthly_cutoff_day integer not null default 1 check (monthly_cutoff_day >= 1 and monthly_cutoff_day <= 31),
+  created_at timestamp with time zone default now(),
+  updated_at timestamp with time zone default now()
+);
+create index if not exists idx_user_settings_user on public.user_settings(user_id);
+
 -- Budgets
 create table if not exists public.budgets (
   id uuid primary key default gen_random_uuid(),
@@ -53,6 +63,7 @@ alter table public.profiles enable row level security;
 alter table public.categories enable row level security;
 alter table public.transactions enable row level security;
 alter table public.budgets enable row level security;
+alter table public.user_settings enable row level security;
 
 -- Policies (owner-only). Use DROP + CREATE pattern.
 
@@ -131,7 +142,30 @@ create policy "Budgets delete own" on public.budgets
   for delete
   using ( auth.uid() = user_id );
 
--- Trigger to auto-create profile when a new auth user is created
+-- user_settings
+drop policy if exists "User settings select own" on public.user_settings;
+drop policy if exists "User settings insert own" on public.user_settings;
+drop policy if exists "User settings update own" on public.user_settings;
+drop policy if exists "User settings delete own" on public.user_settings;
+
+create policy "User settings select own" on public.user_settings
+  for select
+  using ( auth.uid() = user_id );
+
+create policy "User settings insert own" on public.user_settings
+  for insert
+  with check ( auth.uid() = user_id );
+
+create policy "User settings update own" on public.user_settings
+  for update
+  using ( auth.uid() = user_id )
+  with check ( auth.uid() = user_id );
+
+create policy "User settings delete own" on public.user_settings
+  for delete
+  using ( auth.uid() = user_id );
+
+-- Trigger to auto-create profile and settings when a new auth user is created
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -140,6 +174,7 @@ set search_path = public
 as $$
 begin
   insert into public.profiles (id) values (new.id) on conflict do nothing;
+  insert into public.user_settings (user_id) values (new.id) on conflict do nothing;
   return new;
 end;
 $$;
