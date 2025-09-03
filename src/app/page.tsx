@@ -8,12 +8,28 @@ import { VocabCard } from '../components/VocabCard'
 type Category = { id: string; user_id: string; name: string; icon: string; type_scope: 'expense'|'income'|'both' }
 type Tx = { id: string; user_id: string; date: string; amount: number; type: 'expense'|'income'; category_id: string|null; note?: string|null }
 type Budget = { id: string; user_id: string; category_id: string; amount: number; period: string; start_date: string; rollover: boolean }
+type UserSettings = { id: string; user_id: string; monthly_cutoff_day: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n||0)
 const startOfDay = (d: Date) => { const x=new Date(d); x.setHours(0,0,0,0); return x }
 const endOfDay = (d: Date) => { const x=new Date(d); x.setHours(23,59,59,999); return x }
 const startOfMonth = (d: Date) => { const x=new Date(d); x.setDate(1); x.setHours(0,0,0,0); return x }
 const endOfMonth = (d: Date) => { const x=new Date(d); x.setMonth(x.getMonth()+1,0); x.setHours(23,59,59,999); return x }
+const getCustomMonthRange = (date: Date, cutoffDay: number) => {
+  const d = new Date(date)
+  let start: Date
+  
+  if (d.getDate() >= cutoffDay) {
+    // Current period: cutoffDay of current month to (cutoffDay-1) of next month
+    start = new Date(d.getFullYear(), d.getMonth(), cutoffDay, 0, 0, 0, 0)
+  } else {
+    // Previous period: cutoffDay of previous month to (cutoffDay-1) of current month  
+    start = new Date(d.getFullYear(), d.getMonth() - 1, cutoffDay, 0, 0, 0, 0)
+  }
+  
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, cutoffDay - 1, 23, 59, 59, 999)
+  return { from: start, to: end }
+}
 const startOfWeek = (d: Date) => { const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return x }
 const endOfWeek = (d: Date) => { const x=startOfWeek(d); x.setDate(x.getDate()+6); x.setHours(23,59,59,999); return x }
 
@@ -34,7 +50,7 @@ export default function Page() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
       <div className="text-center">
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-          <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
+          <img src="/icon-256.png" alt="Logo MoneYudi" className="w-10 h-10" />
         </div>
         <p className="text-gray-600 font-medium">Memuat aplikasi...</p>
       </div>
@@ -87,7 +103,10 @@ function AuthScreen() {
           <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
             <img src="/icon-256.png" alt="Logo" className="w-12 h-12" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PengeluaranKu</h1>
+            <h1 className="text-3xl font-bold mb-2">
+            <span className="text-gray-900">Mone</span>
+            <span className="text-green-600">Yudi</span>
+            </h1>
           <p className="text-gray-600">Kelola keuangan dengan mudah</p>
         </div>
 
@@ -181,21 +200,24 @@ function AuthScreen() {
 }
 
 function App({ userId }: { userId: string }) {
-  const [tab, setTab] = useState<'home'|'reports'|'budgets'|'history'|'settings'>('home')
+  const [tab, setTab] = useState<'home'|'reports'|'budgets'|'settings'>('home')
   const [categories, setCategories] = useState<Category[]>([])
   const [txs, setTxs] = useState<Tx[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [userSettings, setUserSettings] = useState<UserSettings|null>(null)
   const today = new Date()
 
   const fetchAll = async () => {
-    const [{ data: cats }, { data: trs }, { data: bgs }] = await Promise.all([
+    const [{ data: cats }, { data: trs }, { data: bgs }, settingsResult] = await Promise.all([
       supabase.from('categories').select('*').eq('user_id', userId).order('name', { ascending: true }),
       supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(500),
-      supabase.from('budgets').select('*').eq('user_id', userId)
+      supabase.from('budgets').select('*').eq('user_id', userId),
+      supabase.from('user_settings').select('*').eq('user_id', userId).maybeSingle()
     ])
     setCategories(cats || [])
     setTxs(trs || [])
     setBudgets(bgs || [])
+    setUserSettings(settingsResult.data || { id: '', user_id: userId, monthly_cutoff_day: 1 })
   }
   useEffect(() => { fetchAll() }, [userId])
 
@@ -247,10 +269,9 @@ function App({ userId }: { userId: string }) {
             onAdd={addTx}
             onDelete={delTx}
           />)}
-        {tab==='reports' && (<Reports categories={categories} transactions={txs} />)}
-        {tab==='budgets' && (<Budgets categories={categories} budgets={budgets} transactions={txs} onUpdate={upsertBudget} />)}
-        {tab==='history' && (<History categories={categories} transactions={txs} onDelete={delTx} />)}
-        {tab==='settings' && (<Settings userId={userId} categories={categories} setCategories={setCategories} />)}
+        {tab==='reports' && (<Reports categories={categories} transactions={txs} userSettings={userSettings} onDelete={delTx} />)}
+        {tab==='budgets' && (<Budgets categories={categories} budgets={budgets} transactions={txs} userSettings={userSettings} onUpdate={upsertBudget} />)}
+        {tab==='settings' && (<Settings userId={userId} categories={categories} setCategories={setCategories} userSettings={userSettings} setUserSettings={setUserSettings} />)}
       </main>
       <TabBar tab={tab} setTab={setTab} />
       <ToastContainer />
@@ -271,7 +292,6 @@ function Header({ tab, setTab }:{ tab:any, setTab:any }){
             { id: 'home', label: 'Hari Ini' },
             { id: 'reports', label: 'Laporan' },
             { id: 'budgets', label: 'Anggaran' },
-            { id: 'history', label: 'Riwayat' },
             { id: 'settings', label: 'Pengaturan' },  
           ].map(x => (
             <button key={x.id} onClick={()=>setTab(x.id)} className={`px-3 py-1.5 rounded-full transition ${tab===x.id? 'bg-gray-900 text-white':'hover:bg-gray-100'}`}>
@@ -292,7 +312,6 @@ function TabBar({ tab, setTab }:{ tab:any, setTab:any }){
         { id: 'home', label: 'Hari' },
         { id: 'reports', label: 'Laporan' },
         { id: 'budgets', label: 'Anggaran' },
-        { id: 'history', label: 'Riwayat' },
         { id: 'settings', label: 'Set' },
 
       ].map(x => (
@@ -327,7 +346,17 @@ function QuickAdd({ categories, onAdd }:{ categories:Category[]; onAdd:(t:any)=>
   const [type, setType] = useState<'expense'|'income'>('expense')
   const [categoryId, setCategoryId] = useState<string|undefined>(categories.find(c=>c.type_scope!=='income')?.id)
   const [note, setNote] = useState('')
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0,16))
+  const [date, setDate] = useState(() => {
+    // Get current local date and time in yyyy-MM-ddTHH:mm format (local time, not UTC)
+    const now = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const yyyy = now.getFullYear()
+    const mm = pad(now.getMonth() + 1)
+    const dd = pad(now.getDate())
+    const hh = pad(now.getHours())
+    const min = pad(now.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+  })
 
   useEffect(()=>{
     const valid = categories.filter(c => type==='income' ? c.type_scope==='income' : c.type_scope!=='income')
@@ -337,7 +366,19 @@ function QuickAdd({ categories, onAdd }:{ categories:Category[]; onAdd:(t:any)=>
   const add = async () => {
     if (!amount || amount<=0) return showToast('Nominal harus > 0', 'error')
     await onAdd({ amount, type, category_id: categoryId || null, note, date: new Date(date).toISOString() })
-    setAmount(0); setNote(''); setDate(new Date().toISOString().slice(0,16))
+    setAmount(0); 
+    setNote(''); 
+    setDate(() => {
+    // Get current local date and time in yyyy-MM-ddTHH:mm format (local time, not UTC)
+    const now = new Date()
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    const yyyy = now.getFullYear()
+    const mm = pad(now.getMonth() + 1)
+    const dd = pad(now.getDate())
+    const hh = pad(now.getHours())
+    const min = pad(now.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`
+  })
   }
 
   const cats = categories.filter(c => type==='income' ? c.type_scope==='income' : c.type_scope!=='income')
@@ -358,15 +399,10 @@ function QuickAdd({ categories, onAdd }:{ categories:Category[]; onAdd:(t:any)=>
             type="text"
             inputMode="numeric"
             pattern="[0-9.]*"
-            value={
-              amount === undefined || amount === 0
-          ? ''
-          : amount.toLocaleString('id-ID')
-            }
+            value={amount === 0 ? '' : amount?.toLocaleString('id-ID') || ''}
             onChange={e => {
-              // Remove all non-digit characters
               const raw = e.target.value.replace(/[^\d]/g, '');
-              setAmount(raw === '' ? undefined : Number(raw));
+              setAmount(raw === '' ? 0 : Number(raw));
             }}
             placeholder="0"
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2"
@@ -423,16 +459,28 @@ function TxRow({ t, categories, onDelete }:{ t:Tx; categories:Category[]; onDele
   )
 }
 
-function Reports({ categories, transactions }:{ categories:Category[]; transactions:Tx[] }){
-  const [mode, setMode] = useState<'daily'|'weekly'|'monthly'>('daily')
+function Reports({ categories, transactions, userSettings, onDelete }:{ categories:Category[]; transactions:Tx[]; userSettings:UserSettings|null; onDelete:(id:string)=>void }){
+  const [mode, setMode] = useState<'daily'|'weekly'|'monthly'|'custom'>('custom')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0,10))
+  const [showHistory, setShowHistory] = useState(false)
+  const [q, setQ] = useState('')
+  const [cat, setCat] = useState<'all'|string>('all')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
 
   const range = useMemo(()=>{
     const d = new Date(date)
     if (mode==='daily') return { from: startOfDay(d), to: endOfDay(d), label: d.toLocaleDateString('id-ID') }
     if (mode==='weekly') return { from: startOfWeek(d), to: endOfWeek(d), label: `Minggu ${startOfWeek(d).toLocaleDateString('id-ID')} — ${endOfWeek(d).toLocaleDateString('id-ID')}` }
+    if (mode==='monthly') return { from: startOfMonth(d), to: endOfMonth(d), label: d.toLocaleString('id-ID', { month: 'long', year: 'numeric' }) }
+    if (mode==='custom' && userSettings) {
+      const customRange = getCustomMonthRange(d, userSettings.monthly_cutoff_day)
+      const fromStr = customRange.from.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+      const toStr = customRange.to.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+      return { from: customRange.from, to: customRange.to, label: `${fromStr} — ${toStr}` }
+    }
     return { from: startOfMonth(d), to: endOfMonth(d), label: d.toLocaleString('id-ID', { month: 'long', year: 'numeric' }) }
-  }, [mode, date])
+  }, [mode, date, userSettings])
 
   const txs = transactions.filter(t => { const dt=new Date(t.date); return dt>=range.from && dt<=range.to })
   const expense = txs.filter(t=>t.type==='expense')
@@ -452,6 +500,20 @@ function Reports({ categories, transactions }:{ categories:Category[]; transacti
 
   const biggest = expense.reduce((max, t) => Number(t.amount) > Number((max as any).amount||0) ? t : max, {} as any)
 
+  const historyTxs = useMemo(()=>{
+    return transactions.filter(t => {
+      if (cat!=='all' && t.category_id!==cat) return false
+      if (from) { if (new Date(t.date) < startOfDay(new Date(from))) return false }
+      if (to)   { if (new Date(t.date) > endOfDay(new Date(to))) return false }
+      if (q) {
+        const c = categories.find(c=>c.id===t.category_id)?.name || ''
+        const hay = `${t.note||''} ${c}`.toLowerCase()
+        if (!hay.includes(q.toLowerCase())) return false
+      }
+      return true
+    })
+  }, [transactions, q, cat, from, to, categories])
+
   return (
     <section className="py-6 space-y-6">
       <Card>
@@ -465,6 +527,7 @@ function Reports({ categories, transactions }:{ categories:Category[]; transacti
               <option value="daily">Harian</option>
               <option value="weekly">Mingguan</option>
               <option value="monthly">Bulanan</option>
+              <option value="custom">Custom (Cut-off)</option>
             </select>
             <input type="date" value={date} onChange={e=>setDate(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" />
           </div>
@@ -503,13 +566,58 @@ function Reports({ categories, transactions }:{ categories:Category[]; transacti
           <TxRow t={biggest as Tx} categories={categories} onDelete={()=>{}} />
         </Card>
       )}
+
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-medium">Riwayat Transaksi</h3>
+          <button 
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            {showHistory ? 'Sembunyikan' : 'Tampilkan'} Filter
+          </button>
+        </div>
+        
+        {showHistory && (
+          <div className="grid sm:grid-cols-4 gap-3 mb-4 p-3 bg-gray-50 rounded-xl">
+            <input placeholder="Cari catatan/kategori" value={q} onChange={e=>setQ(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" />
+            <select value={cat} onChange={e=>setCat(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2">
+              <option value="all">Semua Kategori</option>
+              {categories.map(c => (<option key={c.id} value={c.id}>{c.icon} {c.name}</option>))}
+            </select>
+            <input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" placeholder="Dari" />
+            <input type="date" value={to} onChange={e=>setTo(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" placeholder="Sampai" />
+          </div>
+        )}
+        
+        <div className="text-sm text-gray-500 mb-2">
+          {showHistory ? `${historyTxs.length} transaksi ditemukan` : `Menampilkan ${Math.min(20, transactions.length)} transaksi terbaru`}
+        </div>
+        
+        <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+          {(showHistory ? historyTxs : transactions.slice(0, 20)).length === 0 && (
+            <div className="py-8 text-center text-gray-500">
+              {showHistory ? 'Tidak ada transaksi sesuai filter' : 'Belum ada transaksi'}
+            </div>
+          )}
+          {(showHistory ? historyTxs : transactions.slice(0, 20)).map(t => (
+            <TxRow key={t.id} t={t} categories={categories} onDelete={onDelete} />
+          ))}
+        </div>
+      </Card>
     </section>
   )
 }
 
-function Budgets({ categories, budgets, transactions, onUpdate }:{ categories:Category[]; budgets:Budget[]; transactions:Tx[]; onUpdate:(cid:string, amt:number)=>void }){
-  const monthFrom = startOfMonth(new Date())
-  const monthTo = endOfMonth(new Date())
+function Budgets({ categories, budgets, transactions, userSettings, onUpdate }:{ categories:Category[]; budgets:Budget[]; transactions:Tx[]; userSettings:UserSettings|null; onUpdate:(cid:string, amt:number)=>void }){
+  const { monthFrom, monthTo } = useMemo(() => {
+    if (userSettings) {
+      const customRange = getCustomMonthRange(new Date(), userSettings.monthly_cutoff_day)
+      return { monthFrom: customRange.from, monthTo: customRange.to }
+    }
+    return { monthFrom: startOfMonth(new Date()), monthTo: endOfMonth(new Date()) }
+  }, [userSettings])
+  
   const spentByCat = useMemo(()=>{
     const map: Record<string, number> = {}
     for (const t of transactions) {
@@ -520,11 +628,13 @@ function Budgets({ categories, budgets, transactions, onUpdate }:{ categories:Ca
       }
     }
     return map
-  }, [transactions])
+  }, [transactions, monthFrom, monthTo])
   const expenseCats = categories.filter(c=>c.type_scope!=='income')
   return (
     <section className="py-6 space-y-6">
-      <div className="text-sm text-gray-500">Periode: {monthFrom.toLocaleDateString('id-ID', { month:'long', year:'numeric' })}</div>
+      <div className="text-sm text-gray-500">
+        Periode: {monthFrom.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} — {monthTo.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+      </div>
       <div className="space-y-4">
         {expenseCats.map(c => {
           const b = budgets.find(x=>x.category_id===c.id)
@@ -560,52 +670,13 @@ function Budgets({ categories, budgets, transactions, onUpdate }:{ categories:Ca
   )
 }
 
-function History({ categories, transactions, onDelete }:{ categories:Category[]; transactions:Tx[]; onDelete:(id:string)=>void }){
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState<'all'|string>('all')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  const filtered = useMemo(()=>{
-    return transactions.filter(t => {
-      if (cat!=='all' && t.category_id!==cat) return false
-      if (from) { if (new Date(t.date) < startOfDay(new Date(from))) return false }
-      if (to)   { if (new Date(t.date) > endOfMonth(new Date(to))) return false }
-      if (q) {
-        const c = categories.find(c=>c.id===t.category_id)?.name || ''
-        const hay = `${t.note||''} ${c}`.toLowerCase()
-        if (!hay.includes(q.toLowerCase())) return false
-      }
-      return true
-    })
-  }, [transactions, q, cat, from, to])
-  return (
-    <section className="py-6 space-y-6">
-      <Card>
-        <div className="grid sm:grid-cols-4 gap-3">
-          <input placeholder="Cari catatan/kategori" value={q} onChange={e=>setQ(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" />
-          <select value={cat} onChange={e=>setCat(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2">
-            <option value="all">Semua Kategori</option>
-            {categories.map(c => (<option key={c.id} value={c.id}>{c.icon} {c.name}</option>))}
-          </select>
-          <input type="date" value={from} onChange={e=>setFrom(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" />
-          <input type="date" value={to} onChange={e=>setTo(e.target.value)} className="rounded-xl border border-gray-200 px-3 py-2" />
-        </div>
-      </Card>
-      <Card>
-        <h3 className="font-medium mb-2">Semua Transaksi ({filtered.length})</h3>
-        <div className="divide-y divide-gray-100">
-          {filtered.length===0 && <div className="py-8 text-center text-gray-500">Tidak ada data untuk filter saat ini.</div>}
-          {filtered.map(t => (<TxRow key={t.id} t={t} categories={categories} onDelete={onDelete} />))}
-        </div>
-      </Card>
-    </section>
-  )
-}
 
-function Settings({ userId, categories, setCategories }:{ userId:string; categories:Category[]; setCategories:(c:Category[])=>void }){
+
+function Settings({ userId, categories, setCategories, userSettings, setUserSettings }:{ userId:string; categories:Category[]; setCategories:(c:Category[])=>void; userSettings:UserSettings|null; setUserSettings:(s:UserSettings)=>void }){
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('🧾')
   const [scope, setScope] = useState<'expense'|'income'|'both'>('expense')
+  const [cutoffDay, setCutoffDay] = useState(userSettings?.monthly_cutoff_day || 1)
 
   const addCategory = async () => {
     if (!name.trim()) return showToast('Nama kategori wajib', 'error')
@@ -631,8 +702,60 @@ function Settings({ userId, categories, setCategories }:{ userId:string; categor
     showToast('Kategori berhasil dihapus', 'success')
   }
 
+  const updateCutoffDay = async (day: number) => {
+    if (!userSettings?.id) {
+      const { data, error } = await supabase.from('user_settings').insert({ user_id: userId, monthly_cutoff_day: day }).select('*')
+      if (error) return showToast(error.message, 'error')
+      setUserSettings(data[0] as UserSettings)
+    } else {
+      const { data, error } = await supabase.from('user_settings').update({ monthly_cutoff_day: day }).eq('user_id', userId).select('*')
+      if (error) return showToast(error.message, 'error')
+      setUserSettings(data[0] as UserSettings)
+    }
+    showToast('Pengaturan berhasil disimpan', 'success')
+  }
+
   return (
     <section className="py-6 space-y-6">
+      <Card>
+        <h3 className="font-medium mb-3">Pengaturan Laporan</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tanggal Cut-off Bulanan
+            </label>
+            <div className="flex items-center gap-3">
+              <input 
+              type="number" 
+              min="1" 
+              max="31" 
+              value={cutoffDay === 0 ? '' : cutoffDay}
+              onChange={e => {
+                const val = e.target.value;
+                setCutoffDay(val === '' ? 0 : Number(val));
+              }}
+              className="w-20 rounded-xl border border-gray-200 px-3 py-2"
+              />
+              <button 
+              onClick={() => {
+                if (!cutoffDay || cutoffDay < 1 || cutoffDay > 31) {
+                showToast('Tanggal cut-off wajib diisi (1-31)', 'error');
+                return;
+                }
+                updateCutoffDay(cutoffDay);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              >
+              Simpan
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Periode bulanan custom dimulai dari tanggal ini. Contoh: jika diset 25, maka periode saat ini adalah 25 Jul - 24 Agu.
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <Card>
         <h3 className="font-medium mb-3">Kategori</h3>
         <div className="grid sm:grid-cols-5 gap-3">

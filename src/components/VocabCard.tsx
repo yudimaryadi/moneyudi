@@ -1,176 +1,163 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { showToast } from './Toast'
+import React, { useEffect, useMemo, useState } from 'react'
 
-interface VocabData {
+type VocabState = {
   word: string
-  meaning: string
+  meaningId: string
+  meaningEn: string
   example: string
   phonetic?: string
+  updatedAt: string
 }
 
-// Template kalimat yang lebih variatif
+const ONE_HOUR = 60 * 60 * 1000
+const CACHE_KEY = 'moneyudi_vocab_cache_v1'
+
 const exampleTemplates = [
-  "I find {word} quite fascinating in many ways.",
-  "The concept of {word} has always intrigued me.",
-  "Nothing beats the feeling of being {word}.",
-  "Her approach was remarkably {word} and effective.",
-  "We witnessed something truly {word} yesterday.",
-  "The {word} nature of this project impressed everyone.",
-  "He spoke with such {word} that moved the audience.",
-  "The garden looked absolutely {word} in spring.",
-  "Their {word} performance earned a standing ovation.",
-  "What makes this place {word} is its rich history."
+  'I find {word} quite fascinating in many ways.',
+  'The concept of {word} has always intrigued me.',
+  'Nothing beats the feeling of being {word}.',
+  'Her approach was remarkably {word} and effective.',
+  'We witnessed something truly {word} yesterday.',
+  'The {word} nature of this project impressed everyone.',
+  'He spoke with such {word} that moved the audience.',
+  'The garden looked absolutely {word} in spring.',
+  'Their {word} performance earned a standing ovation.',
+  'What makes this place {word} is its rich history.',
 ]
 
-// Fungsi untuk membuat contoh kalimat yang variatif
-const createVariedExample = (word: string, originalExample?: string): string => {
+// ---- helpers
+const createVariedExample = (word: string, originalExample?: string) => {
   if (originalExample && !originalExample.toLowerCase().includes('this is a')) {
     return originalExample
   }
+  const t = exampleTemplates[Math.floor(Math.random() * exampleTemplates.length)]
+  return t.replace('{word}', word.toLowerCase())
+}
+
+const speak = (text: string) => {
+  if (!text || !window.speechSynthesis) return
   
-  const template = exampleTemplates[Math.floor(Math.random() * exampleTemplates.length)]
-  return template.replace('{word}', word.toLowerCase())
+  window.speechSynthesis.cancel()
+  
+  setTimeout(() => {
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'en-US'
+    u.rate = 0.8
+    u.volume = 1
+    window.speechSynthesis.speak(u)
+  }, 100)
 }
 
-// Simple translation dictionary untuk kata-kata umum
-const translationDict: Record<string, string> = {
-  'amazing': 'menakjubkan', 'beautiful': 'indah', 'creative': 'kreatif', 'elegant': 'elegan',
-  'fantastic': 'fantastis', 'incredible': 'luar biasa', 'wonderful': 'menakjubkan', 'brilliant': 'cemerlang',
-  'charming': 'menawan', 'delightful': 'menyenangkan', 'extraordinary': 'luar biasa', 'graceful': 'anggun',
-  'inspiring': 'menginspirasi', 'magnificent': 'megah', 'outstanding': 'luar biasa', 'remarkable': 'luar biasa',
-  'stunning': 'memukau', 'unique': 'unik', 'vibrant': 'bersemangat', 'wisdom': 'kebijaksanaan'
-}
-
-// Fungsi translate sederhana
-const translateToIndonesian = async (text: string): Promise<string> => {
-  // Cek apakah ada terjemahan langsung untuk kata tunggal
-  const lowerText = text.toLowerCase().trim()
-  if (translationDict[lowerText]) {
-    return translationDict[lowerText]
+const loadCache = (): VocabState | null => {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY)
+    return raw ? (JSON.parse(raw) as VocabState) : null
+  } catch {
+    return null
   }
-  
-  // Coba cari kata kunci dalam definisi
-  for (const [eng, ind] of Object.entries(translationDict)) {
-    if (lowerText.includes(eng)) {
-      return `${ind} (${text})`
-    }
-  }
-  
-  // Fallback: return original text
-  return text
 }
 
+const saveCache = (s: VocabState) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(s))
+  } catch {}
+}
+
+// APIs: random word → definition/example → translate EN→ID
+const fetchRandomWord = async (): Promise<string> => {
+  try {
+    // Gratis, tanpa key
+    const r = await fetch('https://random-word-api.vercel.app/api?words=1', { cache: 'no-store' })
+    const j = await r.json()
+    const w = Array.isArray(j) ? j[0] : ''
+    if (typeof w === 'string' && w.length > 1) return w
+  } catch {}
+  const fallback = ['amazing', 'beautiful', 'creative', 'elegant', 'fantastic', 'incredible', 'wonderful', 'brilliant', 'charming', 'delightful']
+  return fallback[Math.floor(Math.random() * fallback.length)]
+}
+
+const fetchDefinition = async (
+  word: string
+): Promise<{ word: string; defEn: string; phonetic: string; example: string }> => {
+  try {
+    const r = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`)
+    const j = await r.json()
+    const e = j?.[0]
+    const phon = e?.phonetic || e?.phonetics?.[0]?.text || ''
+    const defs = (e?.meanings || []).flatMap((m: any) => m.definitions || [])
+    const defEn = defs?.[0]?.definition || 'Definition not available'
+    const ex = defs?.find((d: any) => d.example)?.example || defs?.[0]?.example || ''
+    return { word: e?.word || word, defEn, phonetic: phon, example: ex }
+  } catch {
+    return { word, defEn: 'Definition not available', phonetic: '', example: '' }
+  }
+}
+
+const translateToId = async (text: string): Promise<string> => {
+  if (!text) return ''
+  try {
+    const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|id`)
+    const j = await r.json()
+    const t = j?.responseData?.translatedText
+    if (typeof t === 'string' && t.trim()) return t
+  } catch {}
+  return text // fallback ke EN jika gagal
+}
+
+// ======================= COMPONENT =======================
 export function VocabCard() {
-  const [currentVocab, setCurrentVocab] = useState<VocabData | null>(null)
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
+  const [state, setState] = useState<VocabState | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchRandomWord = async (): Promise<string> => {
+  const refresh = async (forceNew = true) => {
+    setLoading(true)
     try {
-      // Menggunakan API untuk mendapatkan kata random
-      const response = await fetch('https://api.wordnik.com/v4/words.json/randomWord?hasDictionaryDef=true&minCorpusCount=1000&maxCorpusCount=-1&minDictionaryCount=1&maxDictionaryCount=-1&minLength=4&maxLength=12&api_key=a2a73e7b926c924fad7001ca3111acd55af2ffabf50eb4ae5')
-      
-      if (response.ok) {
-        const data = await response.json()
-        return data.word
+      const word = forceNew ? await fetchRandomWord() : state?.word || (await fetchRandomWord())
+      const { word: w, defEn, phonetic, example: ex } = await fetchDefinition(word)
+      const example = createVariedExample(w, ex)
+      const meaningId = await translateToId(defEn)
+      const next: VocabState = {
+        word: w,
+        meaningId,
+        meaningEn: defEn,
+        example,
+        phonetic,
+        updatedAt: new Date().toISOString(),
       }
-    } catch (error) {
-      console.log('Random word API failed, using fallback')
-    }
-    
-    // Fallback words jika API gagal
-    const fallbackWords = ['amazing', 'beautiful', 'creative', 'elegant', 'fantastic', 'incredible', 'wonderful', 'brilliant', 'charming', 'delightful']
-    return fallbackWords[Math.floor(Math.random() * fallbackWords.length)]
-  }
-
-  const fetchVocabFromAPI = async (): Promise<VocabData | null> => {
-    try {
-      const randomWord = await fetchRandomWord()
-      const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${randomWord}`)
-      
-      if (!response.ok) throw new Error('Dictionary API request failed')
-      
-      const data = await response.json()
-      const entry = data[0]
-      
-      if (!entry) throw new Error('No data found')
-      
-      const englishMeaning = entry.meanings?.[0]?.definitions?.[0]?.definition || 'Definition not available'
-      const originalExample = entry.meanings?.[0]?.definitions?.[0]?.example
-      const phonetic = entry.phonetic || entry.phonetics?.[0]?.text || ''
-      
-      // Translate meaning to Indonesian
-      const indonesianMeaning = await translateToIndonesian(englishMeaning)
-      
-      // Create varied example sentence
-      const example = createVariedExample(entry.word, originalExample)
-      
-      return {
-        word: entry.word,
-        meaning: indonesianMeaning,
-        example: example,
-        phonetic: phonetic
-      }
-    } catch (error) {
-      console.error('Error fetching vocabulary:', error)
-      return null
-    }
-  }
-
-  const getRandomVocab = async (): Promise<VocabData> => {
-    const apiVocab = await fetchVocabFromAPI()
-    
-    if (apiVocab) {
-      return apiVocab
-    }
-    
-    // Fallback ke data lokal jika API gagal
-    const fallbackVocabs: VocabData[] = [
-      { word: "Serendipity", meaning: "Keberuntungan yang tidak terduga", example: "Finding this book was pure serendipity." },
-      { word: "Resilience", meaning: "Ketahanan, kemampuan pulih", example: "Her resilience helped her overcome difficulties." },
-      { word: "Eloquent", meaning: "Fasih berbicara", example: "The speaker was eloquent and persuasive." }
-    ]
-    const randomIndex = Math.floor(Math.random() * fallbackVocabs.length)
-    return fallbackVocabs[randomIndex]
-  }
-
-  const refreshVocab = async () => {
-    try {
-      setLoading(true)
-      const newVocab = await getRandomVocab()
-      setCurrentVocab(newVocab)
-      setLastUpdate(new Date())
-      showToast('Vocabulary baru telah dimuat!', 'success')
-    } catch (error) {
-      showToast('Gagal memuat vocabulary baru', 'error')
+      setState(next)
+      saveCache(next)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    // Initial load
-    const loadInitialVocab = async () => {
-      try {
-        const vocab = await getRandomVocab()
-        setCurrentVocab(vocab)
-      } catch (error) {
-        console.error('Failed to load initial vocab:', error)
-      } finally {
-        setLoading(false)
-      }
+    const cached = loadCache()
+    if (cached && Date.now() - new Date(cached.updatedAt).getTime() < ONE_HOUR) {
+      setState(cached)
+      setLoading(false)
+    } else {
+      refresh(true)
     }
-    loadInitialVocab()
 
-    // Auto refresh every hour
-    const interval = setInterval(() => {
-      refreshVocab()
-    }, 60 * 60 * 1000) // 1 hour
-
-    return () => clearInterval(interval)
+    // auto-refresh: cek tiap menit, jika >1 jam akan refresh
+    const id = setInterval(() => {
+      const cur = loadCache()
+      if (!cur || Date.now() - new Date(cur.updatedAt).getTime() >= ONE_HOUR) {
+        refresh(true)
+      }
+    }, 60 * 1000)
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const minutesLeft = useMemo(() => {
+    if (!state?.updatedAt) return null
+    const diff = ONE_HOUR - (Date.now() - new Date(state.updatedAt).getTime())
+    return Math.max(0, Math.ceil(diff / (60 * 1000)))
+  }, [state?.updatedAt])
 
   return (
     <div className="rounded-2xl border border-gray-100 shadow-sm p-4 bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -180,53 +167,60 @@ export function VocabCard() {
           <h3 className="font-medium text-gray-900">English Vocabulary</h3>
         </div>
         <button
-          onClick={refreshVocab}
+          onClick={() => refresh(true)}
           className="p-2 rounded-lg hover:bg-white/50 transition-colors"
           title="Refresh vocabulary"
+          disabled={loading}
         >
-          <span className="text-lg">🔄</span>
+          {loading ? <span className="text-sm text-gray-500">…</span> : <span className="text-lg">🔄</span>}
         </button>
       </div>
-      
+
       <div className="space-y-3">
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
             <span className="ml-2 text-gray-600">Memuat vocabulary...</span>
           </div>
-        ) : currentVocab ? (
+        ) : state ? (
           <>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <div className="text-2xl font-bold text-indigo-900">
-                  {currentVocab.word}
-                </div>
-                {currentVocab.phonetic && (
-                  <div className="text-sm text-gray-500 italic">
-                    {currentVocab.phonetic}
-                  </div>
-                )}
+                <div className="text-2xl font-bold text-indigo-900">{state.word}</div>
+                {state.phonetic && <div className="text-sm text-gray-500 italic">{state.phonetic}</div>}
+                <button
+                  onClick={() => speak(state.word)}
+                  className="text-xs rounded border border-gray-200 px-2 py-1 hover:bg-white/60"
+                  title="Pronounce"
+                >
+                  🔊
+                </button>
               </div>
               <div className="text-gray-700 font-medium">
-                {currentVocab.meaning}
+                <span className="text-gray-600">Arti (ID): </span>
+                {state.meaningId}
               </div>
+              {state.meaningEn && (
+                <div className="text-gray-500 text-sm mt-1">
+                  <span className="font-medium">Definition (EN): </span>
+                  {state.meaningEn}
+                </div>
+              )}
             </div>
-            
+
             <div className="bg-white/60 rounded-lg p-3">
               <div className="text-sm text-gray-600 mb-1">Contoh kalimat:</div>
-              <div className="text-gray-800 italic">
-                "{currentVocab.example}"
-              </div>
+              <div className="text-gray-800 italic">"{state.example}"</div>
             </div>
-            
+
             <div className="text-xs text-gray-500">
-              Terakhir diperbarui: {lastUpdate.toLocaleTimeString('id-ID')}
+              Terakhir diperbarui: {new Date(state.updatedAt).toLocaleTimeString('id-ID')}
+              {minutesLeft !== null && <> · Auto refresh ~{minutesLeft} mnt</>}
+              <div className="text-[10px] text-gray-400 mt-1">Sumber: DictionaryAPI.dev + MyMemory</div>
             </div>
           </>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            Gagal memuat vocabulary. Coba refresh.
-          </div>
+          <div className="text-center py-8 text-gray-500">Gagal memuat vocabulary. Coba refresh.</div>
         )}
       </div>
     </div>
