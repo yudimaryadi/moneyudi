@@ -1,5 +1,5 @@
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? process.env.NEXT_PUBLIC_API_URL || 'https://your-railway-app.railway.app/api'
+  ? process.env.NEXT_PUBLIC_API_URL || 'https://moneyudi-be-production.up.railway.app/api'
   : 'http://localhost:3001';
 
 class ApiClient {
