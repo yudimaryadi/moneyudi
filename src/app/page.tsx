@@ -231,7 +231,13 @@ function App() {
 
   const addTx = async (tx: { amount: number; type: 'expense'|'income'; categoryId?: string; note?: string; date?: string }) => {
     try {
-      const data = await apiClient.createTransaction(tx)
+      const data = await apiClient.createTransaction({
+        amount: tx.amount,
+        type: tx.type,
+        categoryId: tx.categoryId || '',
+        description: tx.note,
+        date: tx.date
+      })
       setTxs(prev => [data, ...prev])
       showToast('Transaksi berhasil ditambahkan', 'success')
     } catch (error: any) {
