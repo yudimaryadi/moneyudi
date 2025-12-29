@@ -72,14 +72,14 @@ class ApiClient {
     return this.request('/categories');
   }
 
-  async createCategory(data: { name: string; color?: string }) {
+  async createCategory(data: { name: string; icon?: string; typeScope?: 'expense'|'income'|'both' }) {
     return this.request('/categories', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   }
 
-  async updateCategory(id: string, data: { name?: string; color?: string }) {
+  async updateCategory(id: string, data: { name?: string; icon?: string; typeScope?: 'expense'|'income'|'both' }) {
     return this.request(`/categories/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data),
@@ -99,6 +99,7 @@ class ApiClient {
 
   async createTransaction(data: {
     amount: number;
+    type: 'expense' | 'income';
     description?: string;
     categoryId: string;
     date?: string;
@@ -144,7 +145,7 @@ class ApiClient {
     return this.request('/budgets');
   }
 
-  async createBudget(data: { amount: number; month: number; year: number }) {
+  async createBudget(data: { amount: number; categoryId: string; period: string }) {
     return this.request('/budgets', {
       method: 'POST',
       body: JSON.stringify(data),
