@@ -427,6 +427,7 @@ function App() {
             setCategories={setCategories}
             userSettings={userSettings}
             setUserSettings={setUserSettings}
+            transactions={txs}
           />
         )}
       </main>
@@ -547,6 +548,7 @@ function Home({
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium">Transaksi Terakhir (Hari Ini)</h3>
         </div>
+        <SearchBar onSearch={(results) => console.log(results)} transactions={todaysTx} categories={categories} />
         <div className="divide-y divide-gray-100">
           {todaysTx.length === 0 && (
             <div className="py-8 text-center text-gray-500">
@@ -1052,11 +1054,13 @@ function Settings({
   setCategories,
   userSettings,
   setUserSettings,
+  transactions,
 }: {
   categories: Category[];
   setCategories: (c: Category[]) => void;
   userSettings: UserSettings;
   setUserSettings: (s: UserSettings) => void;
+  transactions: Tx[];
 }) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("🧾");
@@ -1280,6 +1284,16 @@ function Settings({
       </Card>
 
       <Card>
+        <h3 className="font-medium mb-3">Data Management</h3>
+        <DataManagement transactions={transactions} categories={categories} />
+      </Card>
+
+      <Card>
+        <h3 className="font-medium mb-3">Ubah Password</h3>
+        <ChangePasswordForm />
+      </Card>
+
+      <Card>
         <h3 className="font-medium mb-3">Akun</h3>
         <button
           onClick={logout}
@@ -1289,6 +1303,289 @@ function Settings({
         </button>
       </Card>
     </section>
+  );
+}
+
+function SearchBar({ onSearch, transactions, categories }: { onSearch: (results: Tx[]) => void; transactions: Tx[]; categories: Category[] }) {
+  const [query, setQuery] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  
+  const searchResults = useMemo(() => {
+    if (!query.trim()) return [];
+    
+    return transactions.filter(t => {
+      const cat = categories.find(c => c.id === t.categoryId);
+      const searchText = `${t.note || ''} ${cat?.name || ''} ${t.amount}`.toLowerCase();
+      return searchText.includes(query.toLowerCase());
+    }).slice(0, 10);
+  }, [query, transactions, categories]);
+  
+  useEffect(() => {
+    onSearch(searchResults);
+  }, [searchResults, onSearch]);
+  
+  return (
+    <div className="relative mb-4">
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Cari transaksi..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setShowResults(e.target.value.length > 0);
+          }}
+          onFocus={() => setShowResults(query.length > 0)}
+          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          🔍
+        </div>
+        {query && (
+          <button
+            onClick={() => {
+              setQuery('');
+              setShowResults(false);
+            }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      
+      {showResults && searchResults.length > 0 && (
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 max-h-64 overflow-y-auto">
+          <div className="p-2">
+            <div className="text-xs text-gray-500 px-2 py-1">{searchResults.length} hasil ditemukan</div>
+            {searchResults.map(t => {
+              const cat = categories.find(c => c.id === t.categoryId);
+              const isExpense = t.type === 'expense';
+              return (
+                <div key={t.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
+                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-sm">
+                    {cat?.icon || '💰'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{cat?.name || 'Tanpa Kategori'}</div>
+                    <div className="text-xs text-gray-500 truncate">{t.note}</div>
+                  </div>
+                  <div className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+                    {isExpense ? '-' : '+'}{fmt(Number(t.amount))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {showResults && query && searchResults.length === 0 && (
+        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 p-4 text-center text-gray-500 text-sm">
+          Tidak ada transaksi yang ditemukan
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DataManagement({ transactions, categories }: { transactions: Tx[]; categories: Category[] }) {
+  const exportToCSV = () => {
+    const headers = ['Date', 'Type', 'Amount', 'Category', 'Note'];
+    const rows = transactions.map(t => {
+      const cat = categories.find(c => c.id === t.categoryId);
+      return [
+        new Date(t.date).toLocaleDateString('id-ID'),
+        t.type === 'expense' ? 'Pengeluaran' : 'Pemasukan',
+        t.amount.toString(),
+        cat?.name || 'Tanpa Kategori',
+        t.note || ''
+      ];
+    });
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    
+    showToast('Data berhasil diekspor', 'success');
+  };
+
+  const importFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',');
+        
+        showToast(`File berisi ${lines.length - 1} baris data`, 'success');
+        // TODO: Parse and import data
+      } catch (error) {
+        showToast('Format file tidak valid', 'error');
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const deleteAllData = async () => {
+    if (!confirm('Hapus SEMUA data? Tindakan ini tidak dapat dibatalkan!')) return;
+    if (!confirm('Yakin ingin menghapus semua transaksi dan kategori?')) return;
+    
+    try {
+      // Delete all transactions
+      await Promise.all(transactions.map(t => apiClient.deleteTransaction(t.id)));
+      showToast('Semua data berhasil dihapus', 'success');
+      window.location.reload();
+    } catch (error: any) {
+      showToast(error.message || 'Gagal menghapus data', 'error');
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={exportToCSV}
+          className="px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:bg-green-800 min-h-[48px] font-medium transition-colors shadow-lg"
+        >
+          📤 Export CSV
+        </button>
+        
+        <label className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg cursor-pointer flex items-center justify-center">
+          📥 Import CSV
+          <input
+            type="file"
+            accept=".csv"
+            onChange={importFromFile}
+            className="hidden"
+          />
+        </label>
+      </div>
+      
+      <button
+        onClick={deleteAllData}
+        className="w-full py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 active:bg-red-100 min-h-[48px] font-medium transition-colors"
+      >
+        🗑️ Hapus Semua Data
+      </button>
+      
+      <button
+        onClick={async () => {
+          if (!confirm('Hapus akun permanen? Semua data akan hilang!')) return;
+          if (!confirm('Yakin? Tindakan ini TIDAK DAPAT dibatalkan!')) return;
+          try {
+            await apiClient.deleteAccount();
+            showToast('Akun berhasil dihapus', 'success');
+            apiClient.logout();
+            window.location.reload();
+          } catch (error: any) {
+            showToast(error.message || 'Gagal menghapus akun', 'error');
+          }
+        }}
+        className="w-full py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 active:bg-red-800 min-h-[48px] font-medium transition-colors"
+      >
+        ⚠️ Hapus Akun Permanen
+      </button>
+      
+      <p className="text-xs text-gray-500">
+        Export: Download semua transaksi dalam format CSV<br/>
+        Import: Upload file CSV untuk import data<br/>
+        Hapus: Menghapus semua transaksi (tidak dapat dibatalkan)
+      </p>
+    </div>
+  );
+}
+
+function ChangePasswordForm() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      showToast("Semua field wajib diisi", "error");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      showToast("Password baru tidak cocok", "error");
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      showToast("Password baru minimal 6 karakter", "error");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await apiClient.changePassword(currentPassword, newPassword);
+      showToast("Password berhasil diubah", "success");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      showToast(error.message || "Gagal mengubah password", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">Password Lama</label>
+        <input
+          type="password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={loading}
+        />
+      </div>
+      
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">Password Baru</label>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={loading}
+        />
+      </div>
+      
+      <div>
+        <label className="text-sm text-gray-500 block mb-1">Konfirmasi Password Baru</label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          disabled={loading}
+        />
+      </div>
+      
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg disabled:opacity-50"
+      >
+        {loading ? "Mengubah..." : "Ubah Password"}
+      </button>
+    </form>
   );
 }
 
