@@ -347,7 +347,7 @@ function App() {
         amount: tx.amount,
         type: tx.type,
         categoryId: tx.categoryId || "",
-        description: tx.note,
+        note: tx.note,
         date: tx.date,
       });
       setTxs((prev) => [data, ...prev]);

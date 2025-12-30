@@ -1,6 +1,4 @@
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? process.env.NEXT_PUBLIC_API_URL || 'https://moneyudi-be-production.up.railway.app/api'
-  : 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 class ApiClient {
   private token: string | null = null;
@@ -100,7 +98,7 @@ class ApiClient {
   async createTransaction(data: {
     amount: number;
     type: 'expense' | 'income';
-    description?: string;
+    note?: string;
     categoryId: string;
     date?: string;
   }) {
