@@ -1,5 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
 
+console.log(API_BASE_URL);
+
 class ApiClient {
   private token: string | null = null;
 
@@ -56,6 +58,19 @@ class ApiClient {
     }
     
     return result;
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
+  async deleteAccount() {
+    return this.request('/auth/delete-account', {
+      method: 'DELETE',
+    });
   }
 
   logout() {
