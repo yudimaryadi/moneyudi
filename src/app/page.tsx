@@ -74,7 +74,7 @@ const getCustomMonthRange = (date: Date, cutoffDay: number) => {
     23,
     59,
     59,
-    999
+    999,
   );
   return { from: start, to: end };
 };
@@ -275,7 +275,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
 
 function App() {
   const [tab, setTab] = useState<"home" | "reports" | "budgets" | "settings">(
-    "home"
+    "home",
   );
   const [categories, setCategories] = useState<Category[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
@@ -317,7 +317,7 @@ function App() {
           d.getDate() === today.getDate()
         );
       }),
-    [txs]
+    [txs],
   );
 
   const todayExpense = useMemo(
@@ -325,14 +325,14 @@ function App() {
       todaysTx
         .filter((t) => t.type === "expense")
         .reduce((a, b) => a + Number(b.amount), 0),
-    [todaysTx]
+    [todaysTx],
   );
   const todayIncome = useMemo(
     () =>
       todaysTx
         .filter((t) => t.type === "income")
         .reduce((a, b) => a + Number(b.amount), 0),
-    [todaysTx]
+    [todaysTx],
   );
 
   const addTx = async (tx: {
@@ -373,7 +373,7 @@ function App() {
       if (existing) {
         await apiClient.updateBudget(existing.id, { amount });
         setBudgets((prev) =>
-          prev.map((b) => (b.id === existing.id ? { ...b, amount } : b))
+          prev.map((b) => (b.id === existing.id ? { ...b, amount } : b)),
         );
         showToast("Anggaran berhasil diperbarui", "success");
       } else {
@@ -548,7 +548,11 @@ function Home({
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium">Transaksi Terakhir (Hari Ini)</h3>
         </div>
-        <SearchBar onSearch={(results) => console.log(results)} transactions={todaysTx} categories={categories} />
+        <SearchBar
+          onSearch={(results) => console.log(results)}
+          transactions={todaysTx}
+          categories={categories}
+        />
         <div className="divide-y divide-gray-100">
           {todaysTx.length === 0 && (
             <div className="py-8 text-center text-gray-500">
@@ -595,7 +599,7 @@ function QuickAdd({
     const valid = categories.filter((c) =>
       type === "income"
         ? c.typeScope === "income" || c.typeScope === "both"
-        : c.typeScope === "expense" || c.typeScope === "both"
+        : c.typeScope === "expense" || c.typeScope === "both",
     );
     if (valid.length > 0 && !valid.some((c) => c.id === categoryId)) {
       setCategoryId(valid[0].id);
@@ -630,7 +634,7 @@ function QuickAdd({
   const cats = categories.filter((c) =>
     type === "income"
       ? c.typeScope === "income" || c.typeScope === "both"
-      : c.typeScope === "expense" || c.typeScope === "both"
+      : c.typeScope === "expense" || c.typeScope === "both",
   );
 
   return (
@@ -665,7 +669,7 @@ function QuickAdd({
           </button>
         </div>
       </div>
-      <div className="grid gap-3">
+      <div className="space-y-3">
         <div>
           <label className="text-sm text-gray-500 block mb-1">Nominal</label>
           <input
@@ -682,7 +686,7 @@ function QuickAdd({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3">
           <div>
             <label className="text-sm text-gray-500 block mb-1">Tanggal</label>
             <input
@@ -692,6 +696,9 @@ function QuickAdd({
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+        </div>
+
+        <div className="grid gap-3">
           <div>
             <label className="text-sm text-gray-500 block mb-1">Kategori</label>
             <select
@@ -819,7 +826,7 @@ function Reports({
   onDelete: (id: string) => void;
 }) {
   const [mode, setMode] = useState<"daily" | "weekly" | "monthly" | "custom">(
-    "custom"
+    "custom",
   );
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
@@ -836,7 +843,7 @@ function Reports({
         from: startOfWeek(d),
         to: endOfWeek(d),
         label: `Minggu ${startOfWeek(d).toLocaleDateString(
-          "id-ID"
+          "id-ID",
         )} — ${endOfWeek(d).toLocaleDateString("id-ID")}`,
       };
     if (mode === "monthly")
@@ -952,7 +959,7 @@ function Budgets({
     if (userSettings) {
       const customRange = getCustomMonthRange(
         new Date(),
-        userSettings.monthlyCutoffDay
+        userSettings.monthlyCutoffDay,
       );
       return { monthFrom: customRange.from, monthTo: customRange.to };
     }
@@ -1065,7 +1072,7 @@ function Settings({
   const [icon, setIcon] = useState("🧾");
   const [scope, setScope] = useState<"expense" | "income" | "both">("expense");
   const [cutoffDay, setCutoffDay] = useState(
-    userSettings?.monthlyCutoffDay || 1
+    userSettings?.monthlyCutoffDay || 1,
   );
 
   const addCategory = async () => {
@@ -1088,7 +1095,7 @@ function Settings({
     try {
       await apiClient.updateCategory(id, patch);
       setCategories(
-        categories.map((c) => (c.id === id ? { ...c, ...patch } : c))
+        categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
       );
       showToast("Kategori berhasil diperbarui", "success");
     } catch (error: any) {
@@ -1099,7 +1106,7 @@ function Settings({
   const deleteCategory = async (id: string) => {
     if (
       !confirm(
-        "Hapus kategori ini? Transaksi yang terhubung akan kehilangan referensi."
+        "Hapus kategori ini? Transaksi yang terhubung akan kehilangan referensi.",
       )
     )
       return;
@@ -1234,8 +1241,8 @@ function Settings({
                     {c.typeScope === "both"
                       ? "Pengeluaran & Pemasukan"
                       : c.typeScope === "expense"
-                      ? "Pengeluaran"
-                      : "Pemasukan"}
+                        ? "Pengeluaran"
+                        : "Pemasukan"}
                   </div>
                 </div>
               </div>
@@ -1305,24 +1312,35 @@ function Settings({
   );
 }
 
-function SearchBar({ onSearch, transactions, categories }: { onSearch: (results: Tx[]) => void; transactions: Tx[]; categories: Category[] }) {
-  const [query, setQuery] = useState('');
+function SearchBar({
+  onSearch,
+  transactions,
+  categories,
+}: {
+  onSearch: (results: Tx[]) => void;
+  transactions: Tx[];
+  categories: Category[];
+}) {
+  const [query, setQuery] = useState("");
   const [showResults, setShowResults] = useState(false);
-  
+
   const searchResults = useMemo(() => {
     if (!query.trim()) return [];
-    
-    return transactions.filter(t => {
-      const cat = categories.find(c => c.id === t.categoryId);
-      const searchText = `${t.note || ''} ${cat?.name || ''} ${t.amount}`.toLowerCase();
-      return searchText.includes(query.toLowerCase());
-    }).slice(0, 10);
+
+    return transactions
+      .filter((t) => {
+        const cat = categories.find((c) => c.id === t.categoryId);
+        const searchText =
+          `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase();
+        return searchText.includes(query.toLowerCase());
+      })
+      .slice(0, 10);
   }, [query, transactions, categories]);
-  
+
   useEffect(() => {
     onSearch(searchResults);
   }, [searchResults, onSearch]);
-  
+
   return (
     <div className="relative mb-4">
       <div className="relative">
@@ -1343,7 +1361,7 @@ function SearchBar({ onSearch, transactions, categories }: { onSearch: (results:
         {query && (
           <button
             onClick={() => {
-              setQuery('');
+              setQuery("");
               setShowResults(false);
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
@@ -1352,25 +1370,37 @@ function SearchBar({ onSearch, transactions, categories }: { onSearch: (results:
           </button>
         )}
       </div>
-      
+
       {showResults && searchResults.length > 0 && (
         <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 max-h-64 overflow-y-auto">
           <div className="p-2">
-            <div className="text-xs text-gray-500 px-2 py-1">{searchResults.length} hasil ditemukan</div>
-            {searchResults.map(t => {
-              const cat = categories.find(c => c.id === t.categoryId);
-              const isExpense = t.type === 'expense';
+            <div className="text-xs text-gray-500 px-2 py-1">
+              {searchResults.length} hasil ditemukan
+            </div>
+            {searchResults.map((t) => {
+              const cat = categories.find((c) => c.id === t.categoryId);
+              const isExpense = t.type === "expense";
               return (
-                <div key={t.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
+                <div
+                  key={t.id}
+                  className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg"
+                >
                   <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-sm">
-                    {cat?.icon || '💰'}
+                    {cat?.icon || "💰"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{cat?.name || 'Tanpa Kategori'}</div>
-                    <div className="text-xs text-gray-500 truncate">{t.note}</div>
+                    <div className="text-sm font-medium truncate">
+                      {cat?.name || "Tanpa Kategori"}
+                    </div>
+                    <div className="text-xs text-gray-500 truncate">
+                      {t.note}
+                    </div>
                   </div>
-                  <div className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
-                    {isExpense ? '-' : '+'}{fmt(Number(t.amount))}
+                  <div
+                    className={`text-sm font-semibold ${isExpense ? "text-red-600" : "text-green-600"}`}
+                  >
+                    {isExpense ? "-" : "+"}
+                    {fmt(Number(t.amount))}
                   </div>
                 </div>
               );
@@ -1378,7 +1408,7 @@ function SearchBar({ onSearch, transactions, categories }: { onSearch: (results:
           </div>
         </div>
       )}
-      
+
       {showResults && query && searchResults.length === 0 && (
         <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 p-4 text-center text-gray-500 text-sm">
           Tidak ada transaksi yang ditemukan
@@ -1388,64 +1418,73 @@ function SearchBar({ onSearch, transactions, categories }: { onSearch: (results:
   );
 }
 
-function DataManagement({ transactions, categories }: { transactions: Tx[]; categories: Category[] }) {
+function DataManagement({
+  transactions,
+  categories,
+}: {
+  transactions: Tx[];
+  categories: Category[];
+}) {
   const exportToCSV = () => {
-    const headers = ['Date', 'Type', 'Amount', 'Category', 'Note'];
-    const rows = transactions.map(t => {
-      const cat = categories.find(c => c.id === t.categoryId);
+    const headers = ["Date", "Type", "Amount", "Category", "Note"];
+    const rows = transactions.map((t) => {
+      const cat = categories.find((c) => c.id === t.categoryId);
       return [
-        new Date(t.date).toLocaleDateString('id-ID'),
-        t.type === 'expense' ? 'Pengeluaran' : 'Pemasukan',
+        new Date(t.date).toLocaleDateString("id-ID"),
+        t.type === "expense" ? "Pengeluaran" : "Pemasukan",
         t.amount.toString(),
-        cat?.name || 'Tanpa Kategori',
-        t.note || ''
+        cat?.name || "Tanpa Kategori",
+        t.note || "",
       ];
     });
-    
+
     const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+      .map((row) => row.map((field) => `"${field}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `transactions_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    
-    showToast('Data berhasil diekspor', 'success');
+
+    showToast("Data berhasil diekspor", "success");
   };
 
   const importFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split('\n');
-        const headers = lines[0].split(',');
-        
-        showToast(`File berisi ${lines.length - 1} baris data`, 'success');
+        const lines = text.split("\n");
+        const headers = lines[0].split(",");
+
+        showToast(`File berisi ${lines.length - 1} baris data`, "success");
         // TODO: Parse and import data
       } catch (error) {
-        showToast('Format file tidak valid', 'error');
+        showToast("Format file tidak valid", "error");
       }
     };
     reader.readAsText(file);
   };
 
   const deleteAllData = async () => {
-    if (!confirm('Hapus SEMUA data? Tindakan ini tidak dapat dibatalkan!')) return;
-    if (!confirm('Yakin ingin menghapus semua transaksi dan kategori?')) return;
-    
+    if (!confirm("Hapus SEMUA data? Tindakan ini tidak dapat dibatalkan!"))
+      return;
+    if (!confirm("Yakin ingin menghapus semua transaksi dan kategori?")) return;
+
     try {
       // Delete all transactions
-      await Promise.all(transactions.map(t => apiClient.deleteTransaction(t.id)));
-      showToast('Semua data berhasil dihapus', 'success');
+      await Promise.all(
+        transactions.map((t) => apiClient.deleteTransaction(t.id)),
+      );
+      showToast("Semua data berhasil dihapus", "success");
       window.location.reload();
     } catch (error: any) {
-      showToast(error.message || 'Gagal menghapus data', 'error');
+      showToast(error.message || "Gagal menghapus data", "error");
     }
   };
 
@@ -1458,7 +1497,7 @@ function DataManagement({ transactions, categories }: { transactions: Tx[]; cate
         >
           📤 Export CSV
         </button>
-        
+
         <label className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg cursor-pointer flex items-center justify-center">
           📥 Import CSV
           <input
@@ -1469,35 +1508,37 @@ function DataManagement({ transactions, categories }: { transactions: Tx[]; cate
           />
         </label>
       </div>
-      
+
       <button
         onClick={deleteAllData}
         className="w-full py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 active:bg-red-100 min-h-[48px] font-medium transition-colors"
       >
         🗑️ Hapus Semua Data
       </button>
-      
+
       <button
         onClick={async () => {
-          if (!confirm('Hapus akun permanen? Semua data akan hilang!')) return;
-          if (!confirm('Yakin? Tindakan ini TIDAK DAPAT dibatalkan!')) return;
+          if (!confirm("Hapus akun permanen? Semua data akan hilang!")) return;
+          if (!confirm("Yakin? Tindakan ini TIDAK DAPAT dibatalkan!")) return;
           try {
             await apiClient.deleteAccount();
-            showToast('Akun berhasil dihapus', 'success');
+            showToast("Akun berhasil dihapus", "success");
             apiClient.logout();
             window.location.reload();
           } catch (error: any) {
-            showToast(error.message || 'Gagal menghapus akun', 'error');
+            showToast(error.message || "Gagal menghapus akun", "error");
           }
         }}
         className="w-full py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 active:bg-red-800 min-h-[48px] font-medium transition-colors"
       >
         ⚠️ Hapus Akun Permanen
       </button>
-      
+
       <p className="text-xs text-gray-500">
-        Export: Download semua transaksi dalam format CSV<br/>
-        Import: Upload file CSV untuk import data<br/>
+        Export: Download semua transaksi dalam format CSV
+        <br />
+        Import: Upload file CSV untuk import data
+        <br />
         Hapus: Menghapus semua transaksi (tidak dapat dibatalkan)
       </p>
     </div>
@@ -1512,22 +1553,22 @@ function ChangePasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       showToast("Semua field wajib diisi", "error");
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       showToast("Password baru tidak cocok", "error");
       return;
     }
-    
+
     if (newPassword.length < 6) {
       showToast("Password baru minimal 6 karakter", "error");
       return;
     }
-    
+
     setLoading(true);
     try {
       await apiClient.changePassword(currentPassword, newPassword);
@@ -1545,7 +1586,9 @@ function ChangePasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="text-sm text-gray-500 block mb-1">Password Lama</label>
+        <label className="text-sm text-gray-500 block mb-1">
+          Password Lama
+        </label>
         <input
           type="password"
           value={currentPassword}
@@ -1554,9 +1597,11 @@ function ChangePasswordForm() {
           disabled={loading}
         />
       </div>
-      
+
       <div>
-        <label className="text-sm text-gray-500 block mb-1">Password Baru</label>
+        <label className="text-sm text-gray-500 block mb-1">
+          Password Baru
+        </label>
         <input
           type="password"
           value={newPassword}
@@ -1565,9 +1610,11 @@ function ChangePasswordForm() {
           disabled={loading}
         />
       </div>
-      
+
       <div>
-        <label className="text-sm text-gray-500 block mb-1">Konfirmasi Password Baru</label>
+        <label className="text-sm text-gray-500 block mb-1">
+          Konfirmasi Password Baru
+        </label>
         <input
           type="password"
           value={confirmPassword}
@@ -1576,7 +1623,7 @@ function ChangePasswordForm() {
           disabled={loading}
         />
       </div>
-      
+
       <button
         type="submit"
         disabled={loading}
