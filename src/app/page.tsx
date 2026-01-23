@@ -636,7 +636,6 @@ function QuickAdd({
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-medium">Tambah Transaksi Cepat</h3>
         <div className="inline-flex rounded-lg bg-gray-100 p-1 w-full">
           <button
             className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-colors ${
@@ -687,9 +686,9 @@ function QuickAdd({
           <div>
             <label className="text-sm text-gray-500 block mb-1">Tanggal</label>
             <input
-              type="datetime-local"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              type="date"
+              value={date.slice(0, 10)}
+              onChange={(e) => setDate(`${e.target.value}T12:00:00`)}
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
@@ -782,7 +781,7 @@ function TxRow({
             {cat?.name || "Tanpa Kategori"}
           </div>
           <div className="text-xs text-gray-500 truncate">
-            {new Date(t.date).toLocaleString("id-ID")}{" "}
+            {new Date(t.date).toLocaleDateString("id-ID")}{" "}
             {t.note ? `· ${t.note}` : ""}
           </div>
         </div>
@@ -1186,7 +1185,7 @@ function Settings({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-sm text-gray-500 block mb-1">
                 Ikon (emoji)
