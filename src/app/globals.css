@@ -20,6 +20,34 @@ input, textarea, [contenteditable] {
   user-select: text;
 }
 
+/* Fix Safari iOS date input styling */
+input[type="date"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: white;
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
