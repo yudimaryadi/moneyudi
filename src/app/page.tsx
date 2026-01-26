@@ -114,16 +114,16 @@ export default function Page() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#11b981] to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
             <img
               src="/icon-256.png"
               alt="Logo MoneYudi"
               className="w-10 h-10"
             />
           </div>
-          <p className="text-gray-600 font-medium">Memuat aplikasi...</p>
+          <p className="text-slate-600 font-medium">Memuat aplikasi...</p>
         </div>
       </div>
     );
@@ -166,26 +166,26 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#11b981] to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
             <img src="/icon-256.png" alt="Logo" className="w-12 h-12" />
           </div>
           <h1 className="text-3xl font-bold mb-2">
-            <span className="text-gray-900">Mone</span>
-            <span className="text-green-600">Yudi</span>
+            <span className="text-slate-800">Mone</span>
+            <span className="text-emerald-600">Yudi</span>
           </h1>
-          <p className="text-gray-600">Kelola keuangan dengan mudah</p>
+          <p className="text-slate-600">Kelola keuangan dengan mudah</p>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-xl">
+        <div className="bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-3xl p-8 shadow-xl">
           <div className="space-y-6">
             <div className="text-center">
-              <div className="inline-flex rounded-lg bg-gray-100 p-1">
+              <div className="inline-flex rounded-lg bg-slate-100 p-1">
                 <button
                   className={`px-3 py-1.5 rounded-md text-sm ${
-                    isLogin ? "bg-white shadow" : ""
+                    isLogin ? "bg-white shadow text-slate-700" : "text-slate-600"
                   }`}
                   onClick={() => setIsLogin(true)}
                 >
@@ -193,7 +193,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                 </button>
                 <button
                   className={`px-3 py-1.5 rounded-md text-sm ${
-                    !isLogin ? "bg-white shadow" : ""
+                    !isLogin ? "bg-white shadow text-slate-700" : "text-slate-600"
                   }`}
                   onClick={() => setIsLogin(false)}
                 >
@@ -205,7 +205,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
             <div className="space-y-4">
               {!isLogin && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
                     Nama
                   </label>
                   <input
@@ -213,14 +213,14 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Nama lengkap"
-                    className="w-full rounded-2xl border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors duration-200"
+                    className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
                     disabled={loading}
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Email
                 </label>
                 <input
@@ -228,13 +228,13 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@email.com"
-                  className="w-full rounded-2xl border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors duration-200"
+                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
                   disabled={loading}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Password
                 </label>
                 <input
@@ -242,7 +242,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password (min 6 karakter)"
-                  className="w-full rounded-2xl border-2 border-gray-200 px-4 py-3 focus:border-blue-500 focus:outline-none transition-colors duration-200"
+                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
                   disabled={loading}
                   onKeyDown={(e) => e.key === "Enter" && handleAuth()}
                 />
@@ -251,7 +251,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
               <button
                 onClick={handleAuth}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl py-3 px-4 font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-[#11b981] to-emerald-600 text-white rounded-2xl py-3 px-4 font-semibold hover:from-[#0f9f73] hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -444,7 +444,7 @@ function Header({ tab, setTab }: { tab: any; setTab: any }) {
   };
 
   return (
-    <header className="sticky top-0 z-10 backdrop-blur bg-white/75 border-b border-gray-100">
+    <header className="sticky top-0 z-10 backdrop-blur bg-white/80 border-b border-slate-200">
       <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img
@@ -464,8 +464,8 @@ function Header({ tab, setTab }: { tab: any; setTab: any }) {
             <button
               key={x.id}
               onClick={() => setTab(x.id)}
-              className={`px-3 py-1.5 rounded-full transition ${
-                tab === x.id ? "bg-gray-900 text-white" : "hover:bg-gray-100"
+              className={`px-4 py-2 rounded-full transition-all duration-200 font-medium ${
+                tab === x.id ? "bg-[#11b981] text-white shadow-lg" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
               {x.label}
@@ -474,7 +474,7 @@ function Header({ tab, setTab }: { tab: any; setTab: any }) {
         </nav>
         <button
           onClick={logout}
-          className="text-sm text-gray-500 hover:text-gray-900"
+          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
         >
           Keluar
         </button>
@@ -485,7 +485,7 @@ function Header({ tab, setTab }: { tab: any; setTab: any }) {
 
 function TabBar({ tab, setTab }: { tab: any; setTab: any }) {
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white border border-gray-200 shadow-lg rounded-2xl px-2 py-2 flex gap-1 sm:hidden">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm border border-slate-200 shadow-xl rounded-2xl px-2 py-2 flex gap-1 sm:hidden">
       {[
         { id: "home", label: "Hari", icon: "🏠" },
         { id: "reports", label: "Laporan", icon: "📊" },
@@ -495,14 +495,14 @@ function TabBar({ tab, setTab }: { tab: any; setTab: any }) {
         <button
           key={x.id}
           onClick={() => setTab(x.id)}
-          className={`px-3 py-3 rounded-xl text-xs min-h-[48px] min-w-[60px] flex flex-col items-center gap-1 transition-all ${
+          className={`px-3 py-3 rounded-xl text-xs min-h-[48px] min-w-[60px] flex flex-col items-center gap-1 transition-all duration-200 ${
             tab === x.id
-              ? "bg-gray-900 text-white shadow-md"
-              : "hover:bg-gray-100 active:bg-gray-200"
+              ? "bg-[#11b981] text-white shadow-lg scale-105"
+              : "text-slate-600 hover:bg-slate-100 active:bg-slate-200"
           }`}
         >
           <span className="text-lg">{x.icon}</span>
-          <span>{x.label}</span>
+          <span className="font-medium">{x.label}</span>
         </button>
       ))}
     </div>
@@ -549,7 +549,7 @@ function Home({
           <h3 className="font-medium">Transaksi Terakhir (Hari Ini)</h3>
         </div>
         <SearchBar
-          onSearch={(results) => console.log(results)}
+          onSearch={() => {}}
           transactions={todaysTx}
           categories={categories}
         />
@@ -584,6 +584,7 @@ function QuickAdd({
   const [type, setType] = useState<"expense" | "income">("expense");
   const [categoryId, setCategoryId] = useState<string>("");
   const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(false);
   const [date, setDate] = useState(() => {
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");
@@ -608,27 +609,33 @@ function QuickAdd({
 
   const add = async () => {
     if (!amount || amount <= 0) return showToast("Nominal harus > 0", "error");
+    if (loading) return;
 
-    await onAdd({
-      amount,
-      type,
-      categoryId: categoryId || undefined,
-      note: note || undefined,
-      date: new Date(date).toISOString(),
-    });
+    setLoading(true);
+    try {
+      await onAdd({
+        amount,
+        type,
+        categoryId: categoryId || undefined,
+        note: note || undefined,
+        date: new Date(date).toISOString(),
+      });
 
-    setAmount(0);
-    setNote("");
-    setDate(() => {
-      const now = new Date();
-      const pad = (n: number) => n.toString().padStart(2, "0");
-      const yyyy = now.getFullYear();
-      const mm = pad(now.getMonth() + 1);
-      const dd = pad(now.getDate());
-      const hh = pad(now.getHours());
-      const min = pad(now.getMinutes());
-      return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-    });
+      setAmount(0);
+      setNote("");
+      setDate(() => {
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, "0");
+        const yyyy = now.getFullYear();
+        const mm = pad(now.getMonth() + 1);
+        const dd = pad(now.getDate());
+        const hh = pad(now.getHours());
+        const min = pad(now.getMinutes());
+        return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cats = categories.filter((c) =>
@@ -640,14 +647,15 @@ function QuickAdd({
   return (
     <Card>
       <div className="flex items-center justify-between mb-4">
-        <div className="inline-flex rounded-lg bg-gray-100 p-1 w-full">
+        <div className="inline-flex rounded-lg bg-slate-100 p-1 w-full">
           <button
-            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-colors ${
+            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-all duration-200 ${
               type === "expense"
-                ? "bg-white shadow"
-                : "hover:bg-gray-200 active:bg-gray-300"
+                ? "bg-white shadow-md text-slate-700"
+                : "text-slate-600 hover:bg-slate-200 active:bg-slate-300"
             }`}
             onClick={() => setType("expense")}
+            disabled={loading}
           >
             <div className="flex items-center justify-center gap-2">
               <span>💸</span>
@@ -655,12 +663,13 @@ function QuickAdd({
             </div>
           </button>
           <button
-            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-colors ${
+            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-all duration-200 ${
               type === "income"
-                ? "bg-white shadow"
-                : "hover:bg-gray-200 active:bg-gray-300"
+                ? "bg-white shadow-md text-slate-700"
+                : "text-slate-600 hover:bg-slate-200 active:bg-slate-300"
             }`}
             onClick={() => setType("income")}
+            disabled={loading}
           >
             <div className="flex items-center justify-center gap-2">
               <span>💰</span>
@@ -671,7 +680,7 @@ function QuickAdd({
       </div>
       <div className="space-y-3">
         <div>
-          <label className="text-sm text-gray-500 block mb-1">Nominal</label>
+          <label className="text-sm text-slate-600 font-medium block mb-2">Nominal</label>
           <input
             type="text"
             inputMode="numeric"
@@ -682,7 +691,8 @@ function QuickAdd({
               setAmount(raw === "" ? 0 : Number(raw));
             }}
             placeholder="0"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-lg focus:ring-2 focus:ring-[#11b981] focus:border-[#11b981] transition-colors bg-white"
+            disabled={loading}
           />
         </div>
 
@@ -694,6 +704,7 @@ function QuickAdd({
               value={date.slice(0, 10)}
               onChange={(e) => setDate(`${e.target.value}T12:00:00`)}
               className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
             />
           </div>
         </div>
@@ -705,6 +716,7 @@ function QuickAdd({
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
               className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
             >
               {cats.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -724,6 +736,7 @@ function QuickAdd({
             onChange={(e) => setNote(e.target.value)}
             placeholder="Contoh: kopi pagi di cafe"
             className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={loading}
           />
         </div>
       </div>
@@ -733,15 +746,24 @@ function QuickAdd({
             setAmount(0);
             setNote("");
           }}
-          className="px-6 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 active:bg-gray-100 min-h-[48px] transition-colors"
+          className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 min-h-[48px] transition-all duration-200 font-medium disabled:opacity-50"
+          disabled={loading}
         >
           Reset
         </button>
         <button
           onClick={add}
-          className="px-6 py-3 rounded-xl bg-gray-900 text-white hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-all shadow-lg"
+          disabled={loading}
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#11b981] to-emerald-600 text-white hover:from-[#0f9f73] hover:to-emerald-700 active:from-[#0d8a65] active:to-emerald-800 min-h-[48px] font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          Simpan
+          {loading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Menyimpan...
+            </>
+          ) : (
+            "Simpan"
+          )}
         </button>
       </div>
     </Card>
@@ -758,10 +780,10 @@ function StatCard({
   subtitle?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-gray-100 p-4 shadow-sm">
-      <div className="text-sm text-gray-500">{title}</div>
-      <div className="text-2xl font-semibold mt-1">{value}</div>
-      {subtitle && <div className="text-sm text-gray-500 mt-1">{subtitle}</div>}
+    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+      <div className="text-sm text-slate-500 font-medium">{title}</div>
+      <div className="text-2xl font-bold mt-2 text-slate-800">{value}</div>
+      {subtitle && <div className="text-sm text-slate-500 mt-1">{subtitle}</div>}
     </div>
   );
 }
@@ -775,10 +797,27 @@ function TxRow({
   categories: Category[];
   onDelete: (id: string) => void;
 }) {
+  const [deleting, setDeleting] = useState(false);
   const cat = categories.find((c) => c.id === t.categoryId) || t.category;
   const isExpense = t.type === "expense";
+  
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete(t.id);
+    } finally {
+      setDeleting(false);
+    }
+  };
+  
+  const handleRowClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   return (
-    <div className="flex items-center justify-between py-3 group">
+    <div className="flex items-center justify-between py-3 group" onClick={handleRowClick}>
       <div className="flex items-center gap-3 flex-1">
         <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
           {cat?.icon || "💰"}
@@ -803,11 +842,101 @@ function TxRow({
           {fmt(Number(t.amount))}
         </div>
         <button
-          onClick={() => onDelete(t.id)}
-          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Hapus"
         >
-          🗑️
+          {deleting ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            "🗑️"
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ReportTxRow({
+  t,
+  categories,
+  onDelete,
+  onDateClick,
+}: {
+  t: Tx;
+  categories: Category[];
+  onDelete: (id: string) => void;
+  onDateClick: (date: string) => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const cat = categories.find((c) => c.id === t.categoryId) || t.category;
+  const isExpense = t.type === "expense";
+  const dateStr = new Date(t.date).toISOString().slice(0, 10);
+  
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete(t.id);
+    } finally {
+      setDeleting(false);
+    }
+  };
+  
+  const handleDateClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDateClick(dateStr);
+  };
+  
+  const handleAmountClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
+  return (
+    <div className="flex items-center justify-between py-3 group">
+      <div className="flex items-center gap-3 flex-1">
+        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
+          {cat?.icon || "💰"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">
+            {cat?.name || "Tanpa Kategori"}
+          </div>
+          <div className="text-xs text-gray-500 truncate">
+            <button
+              onClick={handleDateClick}
+              className="hover:text-blue-600 hover:underline transition-colors"
+              title="Klik untuk filter tanggal ini"
+            >
+              {new Date(t.date).toLocaleDateString("id-ID")}
+            </button>
+            {t.note ? ` · ${t.note}` : ""}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <div
+          onClick={handleAmountClick}
+          className={`font-semibold text-right cursor-default ${
+            isExpense ? "text-red-600" : "text-green-600"
+          }`}
+        >
+          {isExpense ? "-" : "+"}
+          {fmt(Number(t.amount))}
+        </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Hapus"
+        >
+          {deleting ? (
+            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : (
+            "🗑️"
+          )}
         </button>
       </div>
     </div>
@@ -825,10 +954,13 @@ function Reports({
   userSettings: UserSettings;
   onDelete: (id: string) => void;
 }) {
-  const [mode, setMode] = useState<"daily" | "weekly" | "monthly" | "custom">(
+  const [mode, setMode] = useState<"daily" | "weekly" | "monthly" | "custom" | "range">(
     "custom",
   );
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [searchQuery, setSearchQuery] = useState("");
 
   const range = useMemo(() => {
     const d = new Date(date);
@@ -852,6 +984,12 @@ function Reports({
         to: endOfMonth(d),
         label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }),
       };
+    if (mode === "range")
+      return {
+        from: startOfDay(new Date(dateFrom)),
+        to: endOfDay(new Date(dateTo)),
+        label: `${new Date(dateFrom).toLocaleDateString("id-ID")} — ${new Date(dateTo).toLocaleDateString("id-ID")}`,
+      };
     if (mode === "custom" && userSettings) {
       const customRange = getCustomMonthRange(d, userSettings.monthlyCutoffDay);
       const fromStr = customRange.from.toLocaleDateString("id-ID", {
@@ -874,17 +1012,36 @@ function Reports({
       to: endOfMonth(d),
       label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }),
     };
-  }, [mode, date, userSettings]);
+  }, [mode, date, dateFrom, dateTo, userSettings]);
 
-  const txs = transactions.filter((t) => {
-    const dt = new Date(t.date);
-    return dt >= range.from && dt <= range.to;
-  });
-  const expense = txs.filter((t) => t.type === "expense");
-  const income = txs.filter((t) => t.type === "income");
+  const filteredTxs = useMemo(() => {
+    let txs = transactions.filter((t) => {
+      const dt = new Date(t.date);
+      return dt >= range.from && dt <= range.to;
+    });
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      txs = txs.filter((t) => {
+        const cat = categories.find((c) => c.id === t.categoryId);
+        const searchText = `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase();
+        return searchText.includes(query);
+      });
+    }
+
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, range, searchQuery, categories]);
+
+  const expense = filteredTxs.filter((t) => t.type === "expense");
+  const income = filteredTxs.filter((t) => t.type === "income");
   const totalExpense = expense.reduce((a, b) => a + Number(b.amount), 0);
   const totalIncome = income.reduce((a, b) => a + Number(b.amount), 0);
   const net = totalIncome - totalExpense;
+
+  const handleDateClick = (clickedDate: string) => {
+    setMode("daily");
+    setDate(clickedDate);
+  };
 
   return (
     <section className="py-6 space-y-6">
@@ -892,25 +1049,44 @@ function Reports({
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div>
             <h3 className="font-medium">Ringkasan • {range.label}</h3>
-            <div className="text-sm text-gray-500">{txs.length} transaksi</div>
+            <div className="text-sm text-gray-500">{filteredTxs.length} transaksi</div>
           </div>
           <div className="flex items-center gap-2">
             <select
               value={mode}
               onChange={(e) => setMode(e.target.value as any)}
-              className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent bg-white"
             >
               <option value="daily">Harian</option>
               <option value="weekly">Mingguan</option>
               <option value="monthly">Bulanan</option>
               <option value="custom">Custom (Cut-off)</option>
+              <option value="range">Range Tanggal</option>
             </select>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            {mode === "range" ? (
+              <>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+                />
+                <span className="text-gray-500">—</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+                />
+              </>
+            ) : (
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+              />
+            )}
           </div>
         </div>
         <div className="grid sm:grid-cols-3 gap-3 mt-4">
@@ -921,19 +1097,42 @@ function Reports({
       </Card>
 
       <Card>
-        <h3 className="font-medium mb-3">Transaksi Terbaru</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">Transaksi</h3>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Cari transaksi..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#11b981] focus:border-transparent text-sm"
+            />
+            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+              🔍
+            </div>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
-          {transactions.slice(0, 20).length === 0 && (
+          {filteredTxs.length === 0 && (
             <div className="py-8 text-center text-gray-500">
-              Belum ada transaksi
+              {searchQuery ? "Tidak ada transaksi yang ditemukan" : "Belum ada transaksi"}
             </div>
           )}
-          {transactions.slice(0, 20).map((t) => (
-            <TxRow
+          {filteredTxs.map((t) => (
+            <ReportTxRow
               key={t.id}
               t={t}
               categories={categories}
               onDelete={onDelete}
+              onDateClick={handleDateClick}
             />
           ))}
         </div>
@@ -1074,9 +1273,14 @@ function Settings({
   const [cutoffDay, setCutoffDay] = useState(
     userSettings?.monthlyCutoffDay || 1,
   );
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   const addCategory = async () => {
     if (!name.trim()) return showToast("Nama kategori wajib", "error");
+    if (addingCategory) return;
+    
+    setAddingCategory(true);
     try {
       const data = await apiClient.createCategory({
         name,
@@ -1088,6 +1292,8 @@ function Settings({
       showToast("Kategori berhasil ditambahkan", "success");
     } catch (error: any) {
       showToast(error.message || "Gagal menambah kategori", "error");
+    } finally {
+      setAddingCategory(false);
     }
   };
 
@@ -1120,6 +1326,9 @@ function Settings({
   };
 
   const updateCutoffDay = async (day: number) => {
+    if (savingSettings) return;
+    
+    setSavingSettings(true);
     try {
       const updatedSettings = await apiClient.updateUserSettings({
         monthlyCutoffDay: day,
@@ -1128,6 +1337,8 @@ function Settings({
       showToast("Pengaturan berhasil disimpan", "success");
     } catch (error: any) {
       showToast(error.message || "Gagal menyimpan pengaturan", "error");
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -1157,6 +1368,7 @@ function Settings({
                   setCutoffDay(val === "" ? 0 : Number(val));
                 }}
                 className="w-20 rounded-xl border border-gray-200 px-3 py-3 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={savingSettings}
               />
               <button
                 onClick={() => {
@@ -1166,9 +1378,17 @@ function Settings({
                   }
                   updateCutoffDay(cutoffDay);
                 }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg"
+                disabled={savingSettings}
+                className="px-6 py-3 bg-[#11b981] text-white rounded-xl hover:bg-[#0f9f73] active:bg-[#0d8a65] min-h-[48px] font-medium transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Simpan
+                {savingSettings ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Simpan"
+                )}
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -1189,6 +1409,7 @@ function Settings({
               onChange={(e) => setName(e.target.value)}
               placeholder="contoh: Kopi"
               className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={addingCategory}
             />
           </div>
 
@@ -1201,6 +1422,7 @@ function Settings({
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 className="w-full rounded-xl border border-gray-200 px-4 py-3 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={addingCategory}
               />
             </div>
             <div>
@@ -1209,6 +1431,7 @@ function Settings({
                 value={scope}
                 onChange={(e) => setScope(e.target.value as any)}
                 className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={addingCategory}
               >
                 <option value="expense">Pengeluaran</option>
                 <option value="income">Pemasukan</option>
@@ -1219,9 +1442,17 @@ function Settings({
 
           <button
             onClick={addCategory}
-            className="w-full rounded-xl bg-gray-900 text-white py-3 hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-all shadow-lg"
+            disabled={addingCategory}
+            className="w-full rounded-xl bg-gray-900 text-white py-3 hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Tambah Kategori
+            {addingCategory ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Menambah...
+              </>
+            ) : (
+              "Tambah Kategori"
+            )}
           </button>
         </div>
 
@@ -1230,61 +1461,12 @@ function Settings({
             <div className="text-sm text-gray-500">Belum ada kategori.</div>
           )}
           {categories.map((c) => (
-            <div key={c.id} className="py-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
-                  {c.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{c.name}</div>
-                  <div className="text-sm text-gray-500 capitalize">
-                    {c.typeScope === "both"
-                      ? "Pengeluaran & Pemasukan"
-                      : c.typeScope === "expense"
-                        ? "Pengeluaran"
-                        : "Pemasukan"}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <input
-                  className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  defaultValue={c.name}
-                  onBlur={(e) => updateCategory(c.id, { name: e.target.value })}
-                  placeholder="Nama kategori"
-                />
-
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    defaultValue={c.icon}
-                    onBlur={(e) =>
-                      updateCategory(c.id, { icon: e.target.value })
-                    }
-                    placeholder="Ikon"
-                  />
-                  <select
-                    defaultValue={c.typeScope}
-                    onChange={(e) =>
-                      updateCategory(c.id, { typeScope: e.target.value as any })
-                    }
-                    className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="expense">Pengeluaran</option>
-                    <option value="income">Pemasukan</option>
-                    <option value="both">Keduanya</option>
-                  </select>
-                </div>
-
-                <button
-                  onClick={() => deleteCategory(c.id)}
-                  className="w-full py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 active:bg-red-100 min-h-[48px] font-medium transition-colors"
-                >
-                  Hapus Kategori
-                </button>
-              </div>
-            </div>
+            <CategoryRow
+              key={c.id}
+              category={c}
+              onUpdate={updateCategory}
+              onDelete={deleteCategory}
+            />
           ))}
         </div>
       </Card>
@@ -1309,6 +1491,90 @@ function Settings({
         </button>
       </Card>
     </section>
+  );
+}
+
+function CategoryRow({
+  category,
+  onUpdate,
+  onDelete,
+}: {
+  category: Category;
+  onUpdate: (id: string, patch: Partial<Category>) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onDelete(category.id);
+    } finally {
+      setDeleting(false);
+    }
+  };
+  
+  return (
+    <div className="py-4 space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
+          {category.icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium">{category.name}</div>
+          <div className="text-sm text-gray-500 capitalize">
+            {category.typeScope === "both"
+              ? "Pengeluaran & Pemasukan"
+              : category.typeScope === "expense"
+                ? "Pengeluaran"
+                : "Pemasukan"}
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <input
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          defaultValue={category.name}
+          onBlur={(e) => onUpdate(category.id, { name: e.target.value })}
+          placeholder="Nama kategori"
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            className="w-full rounded-xl border border-gray-200 px-4 py-3 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            defaultValue={category.icon}
+            onBlur={(e) => onUpdate(category.id, { icon: e.target.value })}
+            placeholder="Ikon"
+          />
+          <select
+            defaultValue={category.typeScope}
+            onChange={(e) => onUpdate(category.id, { typeScope: e.target.value as any })}
+            className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="expense">Pengeluaran</option>
+            <option value="income">Pemasukan</option>
+            <option value="both">Keduanya</option>
+          </select>
+        </div>
+
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="w-full py-3 text-red-600 border border-red-200 rounded-xl hover:bg-red-50 active:bg-red-100 min-h-[48px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          {deleting ? (
+            <>
+              <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+              Menghapus...
+            </>
+          ) : (
+            "Hapus Kategori"
+          )}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1637,7 +1903,7 @@ function ChangePasswordForm() {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-gray-100 shadow-sm p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
       {children}
     </div>
   );
