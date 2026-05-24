@@ -45,18 +45,6 @@ const endOfDay = (d: Date) => {
   x.setHours(23, 59, 59, 999);
   return x;
 };
-const startOfMonth = (d: Date) => {
-  const x = new Date(d);
-  x.setDate(1);
-  x.setHours(0, 0, 0, 0);
-  return x;
-};
-const endOfMonth = (d: Date) => {
-  const x = new Date(d);
-  x.setMonth(x.getMonth() + 1, 0);
-  x.setHours(23, 59, 59, 999);
-  return x;
-};
 const getCustomMonthRange = (date: Date, cutoffDay: number) => {
   const d = new Date(date);
   let start: Date;
@@ -548,11 +536,6 @@ function Home({
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-medium">Transaksi Terakhir (Hari Ini)</h3>
         </div>
-        <SearchBar
-          onSearch={() => {}}
-          transactions={todaysTx}
-          categories={categories}
-        />
         <div className="divide-y divide-gray-100">
           {todaysTx.length === 0 && (
             <div className="py-8 text-center text-gray-500">
@@ -978,12 +961,11 @@ function Reports({
           "id-ID",
         )} — ${endOfWeek(d).toLocaleDateString("id-ID")}`,
       };
-    if (mode === "monthly")
-      return {
-        from: startOfMonth(d),
-        to: endOfMonth(d),
-        label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }),
-      };
+    if (mode === "monthly") {
+      const from = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+      const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      return { from, to, label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }) };
+    }
     if (mode === "range")
       return {
         from: startOfDay(new Date(dateFrom)),
@@ -1007,11 +989,9 @@ function Reports({
         label: `${fromStr} — ${toStr}`,
       };
     }
-    return {
-      from: startOfMonth(d),
-      to: endOfMonth(d),
-      label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }),
-    };
+    const from = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { from, to, label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }) };
   }, [mode, date, dateFrom, dateTo, userSettings]);
 
   const filteredTxs = useMemo(() => {
@@ -1162,9 +1142,10 @@ function Budgets({
       );
       return { monthFrom: customRange.from, monthTo: customRange.to };
     }
+    const now = new Date();
     return {
-      monthFrom: startOfMonth(new Date()),
-      monthTo: endOfMonth(new Date()),
+      monthFrom: new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0),
+      monthTo: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
     };
   }, [userSettings]);
 
@@ -1578,112 +1559,6 @@ function CategoryRow({
   );
 }
 
-function SearchBar({
-  onSearch,
-  transactions,
-  categories,
-}: {
-  onSearch: (results: Tx[]) => void;
-  transactions: Tx[];
-  categories: Category[];
-}) {
-  const [query, setQuery] = useState("");
-  const [showResults, setShowResults] = useState(false);
-
-  const searchResults = useMemo(() => {
-    if (!query.trim()) return [];
-
-    return transactions
-      .filter((t) => {
-        const cat = categories.find((c) => c.id === t.categoryId);
-        const searchText =
-          `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase();
-        return searchText.includes(query.toLowerCase());
-      })
-      .slice(0, 10);
-  }, [query, transactions, categories]);
-
-  useEffect(() => {
-    onSearch(searchResults);
-  }, [searchResults, onSearch]);
-
-  return (
-    <div className="relative mb-4">
-      <div className="relative">
-        <input
-          type="text"
-          placeholder="Cari transaksi..."
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setShowResults(e.target.value.length > 0);
-          }}
-          onFocus={() => setShowResults(query.length > 0)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-          🔍
-        </div>
-        {query && (
-          <button
-            onClick={() => {
-              setQuery("");
-              setShowResults(false);
-            }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
-      {showResults && searchResults.length > 0 && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 max-h-64 overflow-y-auto">
-          <div className="p-2">
-            <div className="text-xs text-gray-500 px-2 py-1">
-              {searchResults.length} hasil ditemukan
-            </div>
-            {searchResults.map((t) => {
-              const cat = categories.find((c) => c.id === t.categoryId);
-              const isExpense = t.type === "expense";
-              return (
-                <div
-                  key={t.id}
-                  className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center text-sm">
-                    {cat?.icon || "💰"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">
-                      {cat?.name || "Tanpa Kategori"}
-                    </div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {t.note}
-                    </div>
-                  </div>
-                  <div
-                    className={`text-sm font-semibold ${isExpense ? "text-red-600" : "text-green-600"}`}
-                  >
-                    {isExpense ? "-" : "+"}
-                    {fmt(Number(t.amount))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {showResults && query && searchResults.length === 0 && (
-        <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 p-4 text-center text-gray-500 text-sm">
-          Tidak ada transaksi yang ditemukan
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DataManagement({
   transactions,
   categories,
@@ -1726,8 +1601,6 @@ function DataManagement({
       try {
         const text = e.target?.result as string;
         const lines = text.split("\n");
-        const headers = lines[0].split(",");
-
         showToast(`File berisi ${lines.length - 1} baris data`, "success");
         // TODO: Parse and import data
       } catch (error) {

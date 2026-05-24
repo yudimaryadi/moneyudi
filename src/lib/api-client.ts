@@ -1,6 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
-
-console.log(API_BASE_URL);
+const API_BASE_URL = '/api'
 
 class ApiClient {
   private token: string | null = null;
