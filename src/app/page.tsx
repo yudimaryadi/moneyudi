@@ -926,6 +926,141 @@ function ReportTxRow({
   );
 }
 
+const PIE_COLORS = [
+  "#11b981", "#f59e0b", "#ef4444", "#8b5cf6", "#3b82f6",
+  "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#84cc16",
+];
+
+function PieChart({
+  transactions,
+  categories,
+  userSettings,
+}: {
+  transactions: Tx[];
+  categories: Category[];
+  userSettings: UserSettings;
+}) {
+  const { from, to, label } = useMemo(() => {
+    const r = getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay);
+    const fromStr = r.from.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+    const toStr = r.to.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+    return { from: r.from, to: r.to, label: `${fromStr} — ${toStr}` };
+  }, [userSettings]);
+
+  const [hovered, setHovered] = useState<string | null>(null);
+
+  const data = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const t of transactions) {
+      if (t.type !== "expense") continue;
+      const d = new Date(t.date);
+      if (d < from || d > to) continue;
+      const key = t.categoryId || "__none__";
+      map[key] = (map[key] || 0) + Number(t.amount);
+    }
+    const total = Object.values(map).reduce((a, b) => a + b, 0);
+    return Object.entries(map)
+      .map(([catId, amount]) => {
+        const cat = categories.find((c) => c.id === catId);
+        return { catId, amount, pct: total > 0 ? (amount / total) * 100 : 0, cat };
+      })
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 10);
+  }, [transactions, categories, from, to]);
+
+  if (data.length === 0)
+    return (
+      <Card>
+        <h3 className="font-semibold text-slate-700 mb-1">Pengeluaran per Kategori</h3>
+        <p className="text-xs text-slate-500 mb-4">{label}</p>
+        <div className="py-8 text-center text-slate-400 text-sm">Belum ada data pengeluaran</div>
+      </Card>
+    );
+
+  const size = 180;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 70;
+  const ir = 42;
+
+  let cumAngle = -Math.PI / 2;
+  const slices = data.map((d, i) => {
+    const angle = (d.pct / 100) * 2 * Math.PI;
+    const startAngle = cumAngle;
+    cumAngle += angle;
+    const endAngle = cumAngle;
+    const x1 = cx + r * Math.cos(startAngle);
+    const y1 = cy + r * Math.sin(startAngle);
+    const x2 = cx + r * Math.cos(endAngle);
+    const y2 = cy + r * Math.sin(endAngle);
+    const ix1 = cx + ir * Math.cos(startAngle);
+    const iy1 = cy + ir * Math.sin(startAngle);
+    const ix2 = cx + ir * Math.cos(endAngle);
+    const iy2 = cy + ir * Math.sin(endAngle);
+    const large = angle > Math.PI ? 1 : 0;
+    const path = `M ${ix1} ${iy1} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${ix2} ${iy2} A ${ir} ${ir} 0 ${large} 0 ${ix1} ${iy1} Z`;
+    return { ...d, path, color: PIE_COLORS[i % PIE_COLORS.length] };
+  });
+
+  const total = data.reduce((a, b) => a + b.amount, 0);
+  const hoveredSlice = slices.find((s) => s.catId === hovered);
+
+  return (
+    <Card>
+      <h3 className="font-semibold text-slate-700 mb-1">Pengeluaran per Kategori</h3>
+      <p className="text-xs text-slate-500 mb-4">{label}</p>
+      <div className="flex flex-col sm:flex-row items-center gap-6">
+        <div className="relative flex-shrink-0">
+          <svg width={size} height={size}>
+            {slices.map((s) => (
+              <path
+                key={s.catId}
+                d={s.path}
+                fill={s.color}
+                opacity={hovered && hovered !== s.catId ? 0.4 : 1}
+                className="cursor-pointer transition-opacity duration-150"
+                onMouseEnter={() => setHovered(s.catId)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            ))}
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            {hoveredSlice ? (
+              <>
+                <span className="text-lg">{hoveredSlice.cat?.icon || "💰"}</span>
+                <span className="text-xs font-semibold text-slate-700 text-center px-2 leading-tight">
+                  {hoveredSlice.pct.toFixed(1)}%
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-slate-500">Total</span>
+                <span className="text-xs font-bold text-slate-700">{fmt(total)}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 w-full space-y-2">
+          {slices.map((s) => (
+            <div
+              key={s.catId}
+              className="flex items-center gap-2 cursor-pointer"
+              onMouseEnter={() => setHovered(s.catId)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: s.color }} />
+              <span className="text-sm flex-shrink-0">{s.cat?.icon || "💰"}</span>
+              <span className="text-sm text-slate-700 truncate flex-1">{s.cat?.name || "Tanpa Kategori"}</span>
+              <span className="text-xs text-slate-500 flex-shrink-0">{s.pct.toFixed(1)}%</span>
+              <span className="text-xs font-medium text-slate-700 flex-shrink-0">{fmt(s.amount)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function Reports({
   categories,
   transactions,
@@ -937,183 +1072,87 @@ function Reports({
   userSettings: UserSettings;
   onDelete: (id: string) => void;
 }) {
-  const [mode, setMode] = useState<"daily" | "weekly" | "monthly" | "custom" | "range">(
-    "custom",
-  );
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [dateFrom, setDateFrom] = useState(() => new Date().toISOString().slice(0, 10));
-  const [dateTo, setDateTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [listFrom, setListFrom] = useState(() => getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).from.toISOString().slice(0, 10));
+  const [listTo, setListTo] = useState(() => getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).to.toISOString().slice(0, 10));
   const [searchQuery, setSearchQuery] = useState("");
-
-  const range = useMemo(() => {
-    const d = new Date(date);
-    if (mode === "daily")
-      return {
-        from: startOfDay(d),
-        to: endOfDay(d),
-        label: d.toLocaleDateString("id-ID"),
-      };
-    if (mode === "weekly")
-      return {
-        from: startOfWeek(d),
-        to: endOfWeek(d),
-        label: `Minggu ${startOfWeek(d).toLocaleDateString(
-          "id-ID",
-        )} — ${endOfWeek(d).toLocaleDateString("id-ID")}`,
-      };
-    if (mode === "monthly") {
-      const from = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-      const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-      return { from, to, label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }) };
-    }
-    if (mode === "range")
-      return {
-        from: startOfDay(new Date(dateFrom)),
-        to: endOfDay(new Date(dateTo)),
-        label: `${new Date(dateFrom).toLocaleDateString("id-ID")} — ${new Date(dateTo).toLocaleDateString("id-ID")}`,
-      };
-    if (mode === "custom" && userSettings) {
-      const customRange = getCustomMonthRange(d, userSettings.monthlyCutoffDay);
-      const fromStr = customRange.from.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-      });
-      const toStr = customRange.to.toLocaleDateString("id-ID", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      return {
-        from: customRange.from,
-        to: customRange.to,
-        label: `${fromStr} — ${toStr}`,
-      };
-    }
-    const from = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-    const to = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
-    return { from, to, label: d.toLocaleString("id-ID", { month: "long", year: "numeric" }) };
-  }, [mode, date, dateFrom, dateTo, userSettings]);
 
   const filteredTxs = useMemo(() => {
     let txs = transactions.filter((t) => {
       const dt = new Date(t.date);
-      return dt >= range.from && dt <= range.to;
+      return dt >= startOfDay(new Date(listFrom)) && dt <= endOfDay(new Date(listTo));
     });
-
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase();
       txs = txs.filter((t) => {
         const cat = categories.find((c) => c.id === t.categoryId);
-        const searchText = `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase();
-        return searchText.includes(query);
+        return `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase().includes(q);
       });
     }
-
     return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, range, searchQuery, categories]);
+  }, [transactions, listFrom, listTo, searchQuery, categories]);
 
-  const expense = filteredTxs.filter((t) => t.type === "expense");
-  const income = filteredTxs.filter((t) => t.type === "income");
-  const totalExpense = expense.reduce((a, b) => a + Number(b.amount), 0);
-  const totalIncome = income.reduce((a, b) => a + Number(b.amount), 0);
-  const net = totalIncome - totalExpense;
+  const totalExpense = filteredTxs.filter((t) => t.type === "expense").reduce((a, b) => a + Number(b.amount), 0);
+  const totalIncome = filteredTxs.filter((t) => t.type === "income").reduce((a, b) => a + Number(b.amount), 0);
 
   const handleDateClick = (clickedDate: string) => {
-    setMode("daily");
-    setDate(clickedDate);
+    setListFrom(clickedDate);
+    setListTo(clickedDate);
   };
 
   return (
     <section className="py-6 space-y-6">
+      <PieChart transactions={transactions} categories={categories} userSettings={userSettings} />
       <Card>
-        <div className="flex flex-wrap items-center gap-3 justify-between">
-          <div>
-            <h3 className="font-medium">Ringkasan • {range.label}</h3>
-            <div className="text-sm text-gray-500">{filteredTxs.length} transaksi</div>
+        <h3 className="font-semibold text-slate-700 mb-3">Daftar Transaksi</h3>
+        <div className="flex flex-wrap gap-2 mb-3">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <input
+              type="date"
+              value={listFrom}
+              onChange={(e) => setListFrom(e.target.value)}
+              className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+            />
+            <span className="text-gray-400">—</span>
+            <input
+              type="date"
+              value={listTo}
+              onChange={(e) => setListTo(e.target.value)}
+              className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value as any)}
-              className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent bg-white"
-            >
-              <option value="daily">Harian</option>
-              <option value="weekly">Mingguan</option>
-              <option value="monthly">Bulanan</option>
-              <option value="custom">Custom (Cut-off)</option>
-              <option value="range">Range Tanggal</option>
-            </select>
-            {mode === "range" ? (
-              <>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
-                />
-                <span className="text-gray-500">—</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
-                />
-              </>
-            ) : (
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
-              />
-            )}
-          </div>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-3 mt-4">
-          <StatCard title="Total Pengeluaran" value={fmt(totalExpense)} />
-          <StatCard title="Total Pemasukan" value={fmt(totalIncome)} />
-          <StatCard title="Selisih (Net)" value={fmt(net)} />
-        </div>
-      </Card>
-
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Transaksi</h3>
           <div className="relative">
             <input
               type="text"
-              placeholder="Cari transaksi..."
+              placeholder="Cari..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#11b981] focus:border-transparent text-sm"
+              className="pl-7 pr-7 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#11b981] focus:border-transparent text-sm w-32"
             />
-            <div className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
-              🔍
-            </div>
+            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
+              <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
             )}
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="rounded-xl bg-red-50 px-4 py-3">
+            <div className="text-xs text-red-500 font-medium">Pengeluaran</div>
+            <div className="text-base font-bold text-red-600">{fmt(totalExpense)}</div>
+          </div>
+          <div className="rounded-xl bg-emerald-50 px-4 py-3">
+            <div className="text-xs text-emerald-600 font-medium">Pemasukan</div>
+            <div className="text-base font-bold text-emerald-600">{fmt(totalIncome)}</div>
+          </div>
+        </div>
+        <div className="text-xs text-slate-400 mb-2">{filteredTxs.length} transaksi</div>
         <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
           {filteredTxs.length === 0 && (
-            <div className="py-8 text-center text-gray-500">
+            <div className="py-8 text-center text-gray-500 text-sm">
               {searchQuery ? "Tidak ada transaksi yang ditemukan" : "Belum ada transaksi"}
             </div>
           )}
           {filteredTxs.map((t) => (
-            <ReportTxRow
-              key={t.id}
-              t={t}
-              categories={categories}
-              onDelete={onDelete}
-              onDateClick={handleDateClick}
-            />
+            <ReportTxRow key={t.id} t={t} categories={categories} onDelete={onDelete} onDateClick={handleDateClick} />
           ))}
         </div>
       </Card>
