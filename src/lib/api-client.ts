@@ -139,6 +139,14 @@ class ApiClient {
     });
   }
 
+  // AI
+  async parseText(text: string): Promise<{
+    amount: number; type: 'expense' | 'income'; categoryId: string;
+    title: string; description: string; date: string;
+  }> {
+    return this.request('/ai/parse', { method: 'POST', body: JSON.stringify({ text }) });
+  }
+
   // User Settings
   async getUserSettings() {
     return this.request('/user-settings');
