@@ -168,7 +168,7 @@ export function VocabCard() {
         </div>
         <button
           onClick={() => refresh(true)}
-          className="p-2 rounded-lg hover:bg-white/50 transition-colors"
+          className="p-2 rounded-lg hover:bg-surface/50 transition-colors"
           title="Refresh vocabulary"
           disabled={loading}
         >
@@ -190,7 +190,7 @@ export function VocabCard() {
                 {state.phonetic && <div className="text-sm text-gray-500 italic">{state.phonetic}</div>}
                 <button
                   onClick={() => speak(state.word)}
-                  className="text-xs rounded border border-gray-200 px-2 py-1 hover:bg-white/60"
+                  className="text-xs rounded border border-gray-200 px-2 py-1 hover:bg-surface/60"
                   title="Pronounce"
                 >
                   🔊
@@ -208,7 +208,7 @@ export function VocabCard() {
               )}
             </div>
 
-            <div className="bg-white/60 rounded-lg p-3">
+            <div className="bg-surface/60 rounded-lg p-3">
               <div className="text-sm text-gray-600 mb-1">Contoh kalimat:</div>
               <div className="text-gray-800 italic">"{state.example}"</div>
             </div>

@@ -42,12 +42,12 @@ export function ToastContainer() {
   }, [])
   
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+    <div role="status" aria-live="polite" className="fixed z-50 space-y-2 top-[calc(4.5rem+env(safe-area-inset-top))] inset-x-4 sm:inset-x-auto sm:top-auto sm:bottom-4 sm:right-4">
       {toasts.map(toast => (
         <div
           key={toast.id}
           className={`
-            max-w-sm p-4 rounded-xl shadow-lg border backdrop-blur-sm
+            sm:max-w-sm p-4 rounded-xl shadow-lg border backdrop-blur-sm
             animate-in slide-in-from-right-full duration-300
             ${toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : ''}
             ${toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : ''}

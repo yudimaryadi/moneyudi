@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { apiClient } from "../lib/api-client";
 import { ToastContainer, showToast } from "../components/Toast";
 import { VocabCard } from "../components/VocabCard";
@@ -105,9 +105,9 @@ export default function Page() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-surface to-blue-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#11b981] to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-16 h-16 mx-auto mb-4 bg-[#11b981] rounded-2xl flex items-center justify-center shadow-lg">
             <img
               src="/icon-256.png"
               alt="Logo MoneYudi"
@@ -157,10 +157,10 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-surface to-blue-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-[#11b981] to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+          <div className="w-20 h-20 mx-auto mb-4 bg-[#11b981] rounded-2xl flex items-center justify-center shadow-lg">
             <img src="/icon-256.png" alt="Logo" className="w-12 h-12" />
           </div>
           <h1 className="text-3xl font-bold mb-2">
@@ -170,13 +170,13 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
           <p className="text-slate-600">Kelola keuangan dengan mudah</p>
         </div>
 
-        <div className="bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-3xl p-8 shadow-xl">
+        <div className="bg-surface/90 backdrop-blur-sm border border-slate-200/50 rounded-3xl p-8 shadow-xl">
           <div className="space-y-6">
             <div className="text-center">
               <div className="inline-flex rounded-lg bg-slate-100 p-1">
                 <button
                   className={`px-3 py-1.5 rounded-md text-sm ${
-                    isLogin ? "bg-white shadow text-slate-700" : "text-slate-600"
+                    isLogin ? "bg-surface shadow text-slate-700" : "text-slate-600"
                   }`}
                   onClick={() => setIsLogin(true)}
                 >
@@ -184,7 +184,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                 </button>
                 <button
                   className={`px-3 py-1.5 rounded-md text-sm ${
-                    !isLogin ? "bg-white shadow text-slate-700" : "text-slate-600"
+                    !isLogin ? "bg-surface shadow text-slate-700" : "text-slate-600"
                   }`}
                   onClick={() => setIsLogin(false)}
                 >
@@ -204,7 +204,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Nama lengkap"
-                    className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
+                    className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-surface"
                     disabled={loading}
                   />
                 </div>
@@ -219,7 +219,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="nama@email.com"
-                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
+                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-surface"
                   disabled={loading}
                 />
               </div>
@@ -233,7 +233,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password (min 6 karakter)"
-                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-white"
+                  className="w-full rounded-2xl border-2 border-slate-200 px-4 py-3 focus:border-[#11b981] focus:outline-none transition-colors duration-200 bg-surface"
                   disabled={loading}
                   onKeyDown={(e) => e.key === "Enter" && handleAuth()}
                 />
@@ -242,7 +242,7 @@ function AuthScreen({ setUser }: { setUser: (u: any) => void }) {
               <button
                 onClick={handleAuth}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-[#11b981] to-emerald-600 text-white rounded-2xl py-3 px-4 font-semibold hover:from-[#0f9f73] hover:to-emerald-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                className="w-full bg-[#11b981] text-white rounded-2xl py-3 px-4 font-semibold hover:bg-[#0f9f73] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -268,6 +268,7 @@ function App() {
   const [tab, setTab] = useState<"home" | "reports" | "budgets" | "settings">(
     "home",
   );
+  const [receipt, setReceipt] = useState<File | null>(null); // photo from the tab bar camera button
   const [categories, setCategories] = useState<Category[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -384,7 +385,7 @@ function App() {
   return (
     <div className="min-h-screen">
       <Header tab={tab} setTab={setTab} />
-      <main className="mx-auto max-w-3xl px-4 pb-28">
+      <main className="mx-auto max-w-3xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-12">
         {tab === "home" && (
           <Home
             categories={categories}
@@ -393,6 +394,8 @@ function App() {
             todayIncome={todayIncome}
             onAdd={addTx}
             onDelete={delTx}
+            receipt={receipt}
+            onReceiptDone={() => setReceipt(null)}
           />
         )}
         {tab === "reports" && (
@@ -422,81 +425,168 @@ function App() {
           />
         )}
       </main>
-      <TabBar tab={tab} setTab={setTab} />
+      <TabBar
+        tab={tab}
+        setTab={setTab}
+        onReceipt={(f) => {
+          setTab("home");
+          setReceipt(f);
+        }}
+      />
       <ToastContainer />
     </div>
   );
 }
 
+// Lucide-style stroke icons (ISC). Emoji stay only for user-chosen category icons.
+const ICONS = {
+  home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
+  chart: "M3 3v18h18M8 17v-5M13 17V8M18 17v-9",
+  wallet: "M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5M16 14h.01",
+  settings: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
+  sun: "M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4",
+  moon: "M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z",
+  mic: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v3",
+  camera: "M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  sparkles: "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 17v4M17 19h4",
+  logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
+  trash: "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6",
+  x: "M18 6 6 18M6 6l12 12",
+  chevronLeft: "m15 18-6-6 6-6",
+  chevronRight: "m9 18 6-6-6-6",
+  search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
+};
+function Icon({ name, className = "w-5 h-5" }: { name: keyof typeof ICONS; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+function useTheme() {
+  const [dark, setDark] = useState(false);
+  useEffect(() => setDark(document.documentElement.classList.contains("dark")), []);
+  const toggle = () => {
+    const next = !dark;
+    document.documentElement.classList.toggle("dark", next);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next ? "#0b1120" : "#ffffff");
+    try {
+      localStorage.setItem("theme", next ? "dark" : "light");
+    } catch {}
+    setDark(next);
+  };
+  return { dark, toggle };
+}
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-2 select-none">
+      <span className="grid place-items-center w-9 h-9 rounded-xl bg-slate-900 text-surface text-sm font-extrabold">MY</span>
+      <span className="text-lg font-bold tracking-tight">
+        <span className="text-slate-900">Mone</span>
+        <span className="text-emerald-500">Yudi</span>
+      </span>
+    </div>
+  );
+}
+
+const NAV = [
+  { id: "home", label: "Hari Ini", icon: "home" },
+  { id: "reports", label: "Laporan", icon: "chart" },
+  { id: "budgets", label: "Anggaran", icon: "wallet" },
+  { id: "settings", label: "Pengaturan", icon: "settings" },
+] as const;
+
 function Header({ tab, setTab }: { tab: any; setTab: any }) {
+  const { dark, toggle } = useTheme();
   const logout = () => {
     apiClient.logout();
     window.location.reload();
   };
+  const iconBtn = "grid place-items-center w-11 h-11 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors";
 
   return (
-    <header className="sticky top-0 z-10 backdrop-blur bg-white/80 border-b border-slate-200">
-      <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img
-            src="moneyudi-logo-navbar.png"
-            alt="MoneYudi"
-            className="h-10 w-auto"
-          />
-        </div>
-
-        <nav className="hidden sm:flex items-center gap-3 text-sm">
-          {[
-            { id: "home", label: "Hari Ini" },
-            { id: "reports", label: "Laporan" },
-            { id: "budgets", label: "Anggaran" },
-            { id: "settings", label: "Pengaturan" },
-          ].map((x) => (
+    <header className="sticky top-0 z-20 backdrop-blur bg-surface/80 border-b border-slate-200 pt-[env(safe-area-inset-top)]">
+      <div className="mx-auto max-w-3xl px-4 h-16 flex items-center justify-between gap-2">
+        <Logo />
+        <nav className="hidden sm:flex items-center gap-1 text-sm" aria-label="Navigasi utama">
+          {NAV.map((x) => (
             <button
               key={x.id}
               onClick={() => setTab(x.id)}
-              className={`px-4 py-2 rounded-full transition-all duration-200 font-medium ${
-                tab === x.id ? "bg-[#11b981] text-white shadow-lg" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+              aria-current={tab === x.id ? "page" : undefined}
+              className={`px-4 py-2 rounded-full transition-colors duration-200 font-medium ${
+                tab === x.id ? "bg-[#11b981] text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
               {x.label}
             </button>
           ))}
         </nav>
-        <button
-          onClick={logout}
-          className="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-        >
-          Keluar
-        </button>
+        <div className="flex items-center gap-1">
+          <button onClick={toggle} className={iconBtn} aria-label={dark ? "Ganti ke tema terang" : "Ganti ke tema gelap"} title={dark ? "Tema terang" : "Tema gelap"}>
+            <Icon name={dark ? "sun" : "moon"} />
+          </button>
+          <button onClick={logout} className={iconBtn} aria-label="Keluar" title="Keluar">
+            <Icon name="logout" />
+          </button>
+        </div>
       </div>
     </header>
   );
 }
 
-function TabBar({ tab, setTab }: { tab: any; setTab: any }) {
+function TabBar({ tab, setTab, onReceipt }: { tab: any; setTab: any; onReceipt: (f: File) => void }) {
+  const item = (x: (typeof NAV)[number]) => {
+    const active = tab === x.id;
+    return (
+      <button
+        key={x.id}
+        onClick={() => setTab(x.id)}
+        aria-current={active ? "page" : undefined}
+        className={`flex flex-col items-center justify-center gap-1 h-16 text-[11px] font-medium transition-colors ${
+          active ? "text-emerald-600" : "text-slate-500 active:bg-slate-100"
+        }`}
+      >
+        <span className={`grid place-items-center w-12 h-7 rounded-full transition-colors ${active ? "bg-emerald-100" : ""}`}>
+          <Icon name={x.icon} />
+        </span>
+        {x.label}
+      </button>
+    );
+  };
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-sm border border-slate-200 shadow-xl rounded-2xl px-2 py-2 flex gap-1 sm:hidden">
-      {[
-        { id: "home", label: "Hari", icon: "🏠" },
-        { id: "reports", label: "Laporan", icon: "📊" },
-        { id: "budgets", label: "Anggaran", icon: "💰" },
-        { id: "settings", label: "Set", icon: "⚙️" },
-      ].map((x) => (
-        <button
-          key={x.id}
-          onClick={() => setTab(x.id)}
-          className={`px-3 py-3 rounded-xl text-xs min-h-[48px] min-w-[60px] flex flex-col items-center gap-1 transition-all duration-200 ${
-            tab === x.id
-              ? "bg-[#11b981] text-white shadow-lg scale-105"
-              : "text-slate-600 hover:bg-slate-100 active:bg-slate-200"
-          }`}
-        >
-          <span className="text-lg">{x.icon}</span>
-          <span className="font-medium">{x.label}</span>
-        </button>
-      ))}
-    </div>
+    <nav
+      aria-label="Navigasi utama"
+      className="fixed inset-x-0 bottom-0 z-20 sm:hidden bg-surface/95 backdrop-blur border-t border-slate-200 pb-[env(safe-area-inset-bottom)]"
+    >
+      <div className="grid grid-cols-5">
+        {NAV.slice(0, 2).map(item)}
+        {/* Raised quick action: opens the rear camera straight to receipt scanning */}
+        <div className="flex flex-col items-center justify-end h-16 pb-1.5">
+          <label
+            aria-label="Foto struk"
+            className="-mt-7 grid place-items-center w-14 h-14 rounded-full bg-[#11b981] text-white shadow-lg shadow-emerald-500/30 ring-4 ring-app active:scale-95 transition-transform cursor-pointer"
+          >
+            <Icon name="camera" className="w-6 h-6" />
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) onReceipt(f);
+              }}
+            />
+          </label>
+          <span className="mt-1 text-[11px] font-medium text-slate-500">Struk</span>
+        </div>
+        {NAV.slice(2).map(item)}
+      </div>
+    </nav>
   );
 }
 
@@ -507,6 +597,8 @@ function Home({
   todayIncome,
   onAdd,
   onDelete,
+  receipt,
+  onReceiptDone,
 }: {
   categories: Category[];
   todaysTx: Tx[];
@@ -514,11 +606,13 @@ function Home({
   todayIncome: number;
   onAdd: (t: any) => void;
   onDelete: (id: string) => void;
+  receipt: File | null;
+  onReceiptDone: () => void;
 }) {
   return (
     <section className="py-6 space-y-6">
-      <QuickAdd categories={categories} onAdd={onAdd} />
-      <div className="grid sm:grid-cols-2 gap-4">
+      <QuickAdd categories={categories} onAdd={onAdd} receipt={receipt} onReceiptDone={onReceiptDone} />
+      <div className="grid grid-cols-2 gap-3">
         <StatCard
           title="Pengeluaran Hari Ini"
           value={fmt(todayExpense)}
@@ -562,9 +656,13 @@ function Home({
 function QuickAdd({
   categories,
   onAdd,
+  receipt,
+  onReceiptDone,
 }: {
   categories: Category[];
   onAdd: (t: any) => void;
+  receipt: File | null;
+  onReceiptDone: () => void;
 }) {
   const [amount, setAmount] = useState<number>(0);
   const [type, setType] = useState<"expense" | "income">("expense");
@@ -626,6 +724,7 @@ function QuickAdd({
 
   const [aiText, setAiText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const formRef = useRef<HTMLElement>(null);
   const [drafts, setDrafts] = useState<AiItem[]>([]);
   const [listening, setListening] = useState(false);
   const noteOf = (r: AiItem) => (r.description ? `${r.title} — ${r.description}` : r.title);
@@ -646,6 +745,7 @@ function QuickAdd({
       if (r.categoryId) setCategoryId(r.categoryId);
       setNote(noteOf(r));
       setDate(`${r.date}T12:00`);
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       showToast("Dicek dulu, lalu tekan Simpan", "success");
     } catch (error: any) {
       showToast(error.message || "AI gagal memproses", "error");
@@ -690,6 +790,15 @@ function QuickAdd({
     }
   };
 
+  // Photo taken from the tab bar camera button; ref guards against double-run
+  const handledReceipt = useRef<File | null>(null);
+  useEffect(() => {
+    if (!receipt || handledReceipt.current === receipt) return;
+    handledReceipt.current = receipt;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    scanReceipt(receipt).finally(onReceiptDone);
+  }, [receipt]);
+
   const saveDrafts = async () => {
     setLoading(true);
     try {
@@ -714,213 +823,244 @@ function QuickAdd({
       : c.typeScope === "expense" || c.typeScope === "both",
   );
 
+  const field =
+    "w-full rounded-xl border border-slate-200 bg-surface px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#11b981]/40 focus:border-[#11b981] transition-colors disabled:opacity-60";
+  const label = "block text-sm font-medium text-slate-600 mb-1.5";
+  const chip =
+    "inline-flex items-center gap-2 h-11 px-4 rounded-xl border border-slate-200 bg-surface text-sm font-medium text-slate-700 hover:bg-slate-50 active:bg-slate-100 transition-colors disabled:opacity-50 cursor-pointer";
+
   return (
-    <Card>
-      <div className="flex gap-2 mb-4">
-        <input
+    <div className="space-y-4">
+      <section aria-labelledby="ai-title" className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-surface p-4 sm:p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="grid place-items-center w-8 h-8 rounded-lg bg-[#11b981] text-white">
+            <Icon name="sparkles" className="w-4 h-4" />
+          </span>
+          <div>
+            <h2 id="ai-title" className="font-semibold text-slate-800 leading-tight">Catat cepat pakai AI</h2>
+            <p className="text-xs text-slate-500">Ketik, ucapkan, atau foto struk</p>
+          </div>
+        </div>
+        <label htmlFor="ai-text" className="sr-only">Teks transaksi</label>
+        <textarea
+          id="ai-text"
+          rows={2}
           value={aiText}
           onChange={(e) => setAiText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && parseAi()}
-          placeholder={listening ? "🎤 Mendengarkan..." : "✨ Nasi 20K, kopi 15K"}
-          className="flex-1 min-w-0 rounded-xl border-2 border-emerald-200 px-4 py-3 focus:ring-2 focus:ring-[#11b981] focus:border-[#11b981] bg-emerald-50/40"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              parseAi();
+            }
+          }}
+          enterKeyHint="send"
+          placeholder={listening ? "Mendengarkan… silakan bicara" : "Contoh: nasi padang 25rb, kopi 15k, parkir 2000"}
+          className={`${field} resize-none leading-relaxed`}
           disabled={aiLoading}
         />
-        {SpeechRec && (
+        <div className="flex items-center gap-2 mt-3">
+          {SpeechRec && (
+            <button
+              onClick={listen}
+              disabled={aiLoading}
+              aria-pressed={listening}
+              className={`${chip} ${listening ? "!border-red-300 !bg-red-50 !text-red-600 animate-pulse" : ""}`}
+            >
+              <Icon name="mic" className="w-4 h-4" />
+              <span>{listening ? "Dengar…" : "Suara"}</span>
+            </button>
+          )}
+          <label className={`${chip} ${aiLoading ? "opacity-50 pointer-events-none" : ""}`}>
+            <Icon name="camera" className="w-4 h-4" />
+            <span>Struk</span>
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                scanReceipt(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <button
-            onClick={listen}
-            disabled={aiLoading}
-            aria-label="Input suara"
-            className={`w-12 rounded-xl border-2 min-h-[48px] disabled:opacity-50 ${listening ? "border-red-300 bg-red-50 animate-pulse" : "border-slate-200"}`}
+            onClick={() => parseAi()}
+            disabled={aiLoading || !aiText.trim()}
+            className="ml-auto inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-[#11b981] text-white font-semibold hover:bg-[#0f9f73] active:bg-[#0d8a65] transition-colors disabled:opacity-50"
           >
-            🎤
+            {aiLoading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span className="sr-only sm:not-sr-only">Memproses</span>
+              </>
+            ) : (
+              "Proses"
+            )}
           </button>
-        )}
-        <label
-          aria-label="Foto struk"
-          className={`w-12 rounded-xl border-2 border-slate-200 min-h-[48px] flex items-center justify-center cursor-pointer ${aiLoading ? "opacity-50 pointer-events-none" : ""}`}
-        >
-          📷
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              scanReceipt(e.target.files?.[0]);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        <button
-          onClick={() => parseAi()}
-          disabled={aiLoading || !aiText.trim()}
-          className="px-4 rounded-xl bg-[#11b981] text-white font-medium min-h-[48px] disabled:opacity-50"
-        >
-          {aiLoading ? "..." : "Isi"}
-        </button>
-      </div>
-      {drafts.length > 0 && (
-        <div className="mb-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-3">
-          <div className="text-sm font-medium text-slate-700 mb-2">
-            {drafts.length} transaksi terbaca — cek dulu:
-          </div>
-          <div className="divide-y divide-emerald-100">
-            {drafts.map((d, i) => {
-              const cat = categories.find((c) => c.id === d.categoryId);
-              return (
-                <div key={i} className="flex items-center gap-2 py-2">
-                  <span className="text-lg">{cat?.icon || "💰"}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{d.title}</div>
-                    <div className="text-xs text-slate-500 truncate">
-                      {cat?.name || "Tanpa Kategori"} · {new Date(`${d.date}T12:00`).toLocaleDateString("id-ID")}
+        </div>
+        <p aria-live="polite" className="sr-only">{aiLoading ? "AI sedang memproses" : ""}</p>
+
+        {drafts.length > 0 && (
+          <div className="mt-4 rounded-xl border border-slate-200 bg-surface">
+            <div className="px-4 pt-3 pb-1 text-sm font-medium text-slate-700">
+              {drafts.length} transaksi terbaca — cek dulu
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {drafts.map((d, i) => {
+                const cat = categories.find((c) => c.id === d.categoryId);
+                return (
+                  <li key={i} className="flex items-center gap-3 pl-4 pr-1 py-2">
+                    <span className="text-xl" aria-hidden="true">{cat?.icon || "💰"}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-800 truncate">{d.title}</div>
+                      <div className="text-xs text-slate-500 truncate">
+                        {cat?.name || "Tanpa Kategori"} · {new Date(`${d.date}T12:00`).toLocaleDateString("id-ID")}
+                      </div>
                     </div>
-                  </div>
-                  <span className={`text-sm font-semibold ${d.type === "expense" ? "text-red-600" : "text-green-600"}`}>
-                    {d.type === "expense" ? "-" : "+"}{fmt(d.amount)}
-                  </span>
-                  <button
-                    onClick={() => setDrafts(drafts.filter((_, j) => j !== i))}
-                    aria-label="Buang"
-                    className="w-8 h-8 text-slate-400 hover:text-red-600"
-                    disabled={loading}
-                  >
-                    ✕
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex gap-2 mt-3">
-            <button onClick={() => setDrafts([])} disabled={loading} className="flex-1 py-2 rounded-xl border-2 border-slate-200 text-slate-600 disabled:opacity-50">
-              Batal
-            </button>
-            <button onClick={saveDrafts} disabled={loading} className="flex-1 py-2 rounded-xl bg-[#11b981] text-white font-semibold disabled:opacity-50">
-              {loading ? "Menyimpan..." : `Simpan semua (${fmt(drafts.reduce((a, d) => a + d.amount, 0))})`}
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="flex items-center justify-between mb-4">
-        <div className="inline-flex rounded-lg bg-slate-100 p-1 w-full">
-          <button
-            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-all duration-200 ${
-              type === "expense"
-                ? "bg-white shadow-md text-slate-700"
-                : "text-slate-600 hover:bg-slate-200 active:bg-slate-300"
-            }`}
-            onClick={() => setType("expense")}
-            disabled={loading}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <span>💸</span>
-              <span>Pengeluaran</span>
+                    <span className={`text-sm font-semibold tabular-nums ${d.type === "expense" ? "text-red-600" : "text-green-600"}`}>
+                      {d.type === "expense" ? "−" : "+"}{fmt(d.amount)}
+                    </span>
+                    <button
+                      onClick={() => setDrafts(drafts.filter((_, j) => j !== i))}
+                      aria-label={`Buang ${d.title}`}
+                      className="grid place-items-center w-11 h-11 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
+                      disabled={loading}
+                    >
+                      <Icon name="x" className="w-4 h-4" />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="flex gap-2 p-3 border-t border-slate-100">
+              <button onClick={() => setDrafts([])} disabled={loading} className="h-11 px-4 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 disabled:opacity-50">
+                Batal
+              </button>
+              <button onClick={saveDrafts} disabled={loading} className="flex-1 h-11 rounded-xl bg-[#11b981] text-white font-semibold hover:bg-[#0f9f73] disabled:opacity-50">
+                {loading ? "Menyimpan…" : `Simpan semua · ${fmt(drafts.reduce((a, d) => a + d.amount, 0))}`}
+              </button>
             </div>
-          </button>
-          <button
-            className={`flex-1 py-3 px-3 rounded-md text-sm font-medium min-h-[44px] transition-all duration-200 ${
-              type === "income"
-                ? "bg-white shadow-md text-slate-700"
-                : "text-slate-600 hover:bg-slate-200 active:bg-slate-300"
-            }`}
-            onClick={() => setType("income")}
-            disabled={loading}
-          >
-            <div className="flex items-center justify-center gap-2">
-              <span>💰</span>
-              <span>Pemasukan</span>
-            </div>
-          </button>
-        </div>
-      </div>
-      <div className="space-y-3">
-        <div>
-          <label className="text-sm text-slate-600 font-medium block mb-2">Nominal</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9.]*"
-            value={amount === 0 ? "" : amount?.toLocaleString("id-ID") || ""}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[^\d]/g, "");
-              setAmount(raw === "" ? 0 : Number(raw));
-            }}
-            placeholder="0"
-            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-lg focus:ring-2 focus:ring-[#11b981] focus:border-[#11b981] transition-colors bg-white"
-            disabled={loading}
-          />
+          </div>
+        )}
+      </section>
+
+      <section ref={formRef} aria-labelledby="manual-title" className="rounded-2xl border border-slate-200 bg-surface p-4 sm:p-5 scroll-mt-20">
+        <h2 id="manual-title" className="font-semibold text-slate-800 mb-3">Isi manual</h2>
+        <div role="radiogroup" aria-label="Jenis transaksi" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 mb-4">
+          {([
+            ["expense", "Pengeluaran", "text-red-600"],
+            ["income", "Pemasukan", "text-green-600"],
+          ] as const).map(([val, text, color]) => (
+            <button
+              key={val}
+              role="radio"
+              aria-checked={type === val}
+              onClick={() => setType(val)}
+              disabled={loading}
+              className={`h-11 rounded-lg text-sm font-semibold transition-colors ${
+                type === val ? `bg-surface dark:bg-slate-200 shadow-sm ${color}` : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {text}
+            </button>
+          ))}
         </div>
 
-        <div className="grid gap-3">
+        <div className="space-y-4">
           <div>
-            <label className="text-sm text-gray-500 block mb-1">Tanggal</label>
+            <label htmlFor="qa-amount" className={label}>Nominal</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">Rp</span>
+              <input
+                id="qa-amount"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9.]*"
+                value={amount === 0 ? "" : amount?.toLocaleString("id-ID") || ""}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^\d]/g, "");
+                  setAmount(raw === "" ? 0 : Number(raw));
+                }}
+                placeholder="0"
+                className={`${field} pl-11 text-xl font-semibold tabular-nums`}
+                disabled={loading}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="qa-date" className={label}>Tanggal</label>
+              <input
+                id="qa-date"
+                type="date"
+                value={date.slice(0, 10)}
+                onChange={(e) => setDate(`${e.target.value}T12:00:00`)}
+                className={field}
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="qa-cat" className={label}>Kategori</label>
+              <select
+                id="qa-cat"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className={field}
+                disabled={loading}
+              >
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="qa-note" className={label}>
+              Catatan <span className="font-normal text-slate-400">(opsional)</span>
+            </label>
             <input
-              type="date"
-              value={date.slice(0, 10)}
-              onChange={(e) => setDate(`${e.target.value}T12:00:00`)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              id="qa-note"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Contoh: kopi pagi di kafe"
+              className={field}
               disabled={loading}
             />
           </div>
         </div>
 
-        <div className="grid gap-3">
-          <div>
-            <label className="text-sm text-gray-500 block mb-1">Kategori</label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={loading}
-            >
-              {cats.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.icon} {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="text-sm text-gray-500 block mb-1">
-            Catatan (opsional)
-          </label>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Contoh: kopi pagi di cafe"
-            className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        <div className="mt-5 flex gap-2">
+          <button
+            onClick={() => {
+              setAmount(0);
+              setNote("");
+            }}
+            className="h-12 px-5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 active:bg-slate-100 transition-colors disabled:opacity-50"
             disabled={loading}
-          />
+          >
+            Reset
+          </button>
+          <button
+            onClick={add}
+            disabled={loading}
+            className="flex-1 h-12 rounded-xl bg-[#11b981] text-white font-semibold hover:bg-[#0f9f73] active:bg-[#0d8a65] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Menyimpan…
+              </>
+            ) : (
+              "Simpan"
+            )}
+          </button>
         </div>
-      </div>
-      <div className="mt-4 flex items-center justify-end gap-2">
-        <button
-          onClick={() => {
-            setAmount(0);
-            setNote("");
-          }}
-          className="px-6 py-3 rounded-xl border-2 border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 min-h-[48px] transition-all duration-200 font-medium disabled:opacity-50"
-          disabled={loading}
-        >
-          Reset
-        </button>
-        <button
-          onClick={add}
-          disabled={loading}
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#11b981] to-emerald-600 text-white hover:from-[#0f9f73] hover:to-emerald-700 active:from-[#0d8a65] active:to-emerald-800 min-h-[48px] font-semibold transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Menyimpan...
-            </>
-          ) : (
-            "Simpan"
-          )}
-        </button>
-      </div>
-    </Card>
+      </section>
+    </div>
   );
 }
 
@@ -934,9 +1074,9 @@ function StatCard({
   subtitle?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6 shadow-sm hover:shadow-md transition-shadow duration-200">
+    <div className="rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
       <div className="text-sm text-slate-500 font-medium">{title}</div>
-      <div className="text-2xl font-bold mt-2 text-slate-800">{value}</div>
+      <div className="text-lg sm:text-2xl font-bold mt-1 text-slate-800 tabular-nums">{value}</div>
       {subtitle && <div className="text-sm text-slate-500 mt-1">{subtitle}</div>}
     </div>
   );
@@ -972,7 +1112,7 @@ function TxRow({
   
   return (
     <div className="flex items-center justify-between py-3 group" onClick={handleRowClick}>
-      <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
           {cat?.icon || "💰"}
         </div>
@@ -998,13 +1138,14 @@ function TxRow({
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Hapus"
+          aria-label="Hapus transaksi"
         >
           {deleting ? (
             <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           ) : (
-            "🗑️"
+            <Icon name="trash" className="w-4 h-4" />
           )}
         </button>
       </div>
@@ -1050,7 +1191,7 @@ function ReportTxRow({
   
   return (
     <div className="flex items-center justify-between py-3 group">
-      <div className="flex items-center gap-3 flex-1">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
           {cat?.icon || "💰"}
         </div>
@@ -1083,13 +1224,14 @@ function ReportTxRow({
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center opacity-0 group-hover:opacity-100 sm:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Hapus"
+          aria-label="Hapus transaksi"
         >
           {deleting ? (
             <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
           ) : (
-            "🗑️"
+            <Icon name="trash" className="w-4 h-4" />
           )}
         </button>
       </div>
@@ -1279,42 +1421,50 @@ function Reports({
   return (
     <section className="py-6 space-y-6">
       <div className="flex items-center justify-between">
-        <button onClick={() => shiftPeriod(-1)} className="px-4 py-2 rounded-xl border border-slate-200 bg-white min-h-[44px]" aria-label="Periode sebelumnya">◀</button>
-        <span className="text-sm font-medium text-slate-700">
+        <button onClick={() => shiftPeriod(-1)} className="grid place-items-center w-11 h-11 rounded-xl border border-slate-200 bg-surface text-slate-600 hover:bg-slate-50" aria-label="Periode sebelumnya">
+          <Icon name="chevronLeft" />
+        </button>
+        <span className="text-sm font-semibold text-slate-800 tabular-nums">
           {new Date(`${listFrom}T12:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} — {new Date(`${listTo}T12:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
         </span>
-        <button onClick={() => shiftPeriod(1)} className="px-4 py-2 rounded-xl border border-slate-200 bg-white min-h-[44px]" aria-label="Periode berikutnya">▶</button>
+        <button onClick={() => shiftPeriod(1)} className="grid place-items-center w-11 h-11 rounded-xl border border-slate-200 bg-surface text-slate-600 hover:bg-slate-50" aria-label="Periode berikutnya">
+          <Icon name="chevronRight" />
+        </button>
       </div>
       <PieChart transactions={transactions} categories={categories} from={startOfDay(new Date(`${listFrom}T12:00`))} to={endOfDay(new Date(`${listTo}T12:00`))} />
       <Card>
         <h3 className="font-semibold text-slate-700 mb-3">Log Transaksi</h3>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="grid gap-2 mb-3 sm:grid-cols-[1fr_1fr_12rem]">
+          <div className="grid grid-cols-2 gap-2 sm:contents">
             <input
               type="date"
+              aria-label="Dari tanggal"
               value={listFrom}
               onChange={(e) => setListFrom(e.target.value)}
-              className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+              className="w-full min-w-0 rounded-xl border border-slate-200 bg-surface px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
             />
-            <span className="text-gray-400">—</span>
             <input
               type="date"
+              aria-label="Sampai tanggal"
               value={listTo}
               onChange={(e) => setListTo(e.target.value)}
-              className="flex-1 min-w-0 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-[#11b981] focus:border-transparent"
+              className="w-full min-w-0 rounded-xl border border-slate-200 bg-surface px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
             />
           </div>
           <div className="relative">
             <input
-              type="text"
-              placeholder="Cari..."
+              type="search"
+              aria-label="Cari transaksi"
+              placeholder="Cari catatan, kategori, nominal"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 pr-7 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#11b981] focus:border-transparent text-sm w-32"
+              className="w-full pl-9 pr-10 py-2.5 rounded-xl border border-slate-200 bg-surface text-base sm:text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
             />
-            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+            <Icon name="search" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs">✕</button>
+              <button onClick={() => setSearchQuery("")} aria-label="Hapus pencarian" className="absolute right-0 top-0 grid place-items-center w-10 h-full text-slate-400 hover:text-slate-600">
+                <Icon name="x" className="w-4 h-4" />
+              </button>
             )}
           </div>
         </div>
@@ -1425,25 +1575,28 @@ function Budgets({
                   <div className="h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
                     <div
                       className={`h-full ${
-                        warn ? "bg-red-500" : "bg-gray-900"
+                        warn ? "bg-red-500" : "bg-emerald-500"
                       }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                 </div>
               </div>
-              <div className="mt-3 flex items-center gap-2">
-                <label className="text-sm text-gray-500">Limit bulanan</label>
-                <input
-                  type="number"
-                  className="w-32 rounded-xl border border-gray-200 px-3 py-1.5"
-                  defaultValue={limit}
-                  onBlur={(e) => onUpdate(c.id, Number(e.target.value || 0))}
-                  placeholder="0"
-                />
-                <span className="text-sm text-gray-400">
-                  (ketik lalu pindah fokus untuk menyimpan)
-                </span>
+              <div className="mt-3">
+                <label htmlFor={`limit-${c.id}`} className="block text-sm font-medium text-slate-600 mb-1.5">Limit bulanan</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">Rp</span>
+                  <input
+                    id={`limit-${c.id}`}
+                    type="number"
+                    inputMode="numeric"
+                    className="w-full rounded-xl border border-slate-200 bg-surface pl-10 pr-3 py-2.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
+                    defaultValue={limit || ""}
+                    onBlur={(e) => onUpdate(c.id, Number(e.target.value || 0))}
+                    placeholder="0"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Tersimpan otomatis saat kamu selesai mengetik.</p>
               </div>
               {warn && (
                 <div className="mt-2 text-xs text-red-600">
@@ -1634,7 +1787,7 @@ function Settings({
               <select
                 value={scope}
                 onChange={(e) => setScope(e.target.value as any)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-surface focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={addingCategory}
               >
                 <option value="expense">Pengeluaran</option>
@@ -1647,7 +1800,7 @@ function Settings({
           <button
             onClick={addCategory}
             disabled={addingCategory}
-            className="w-full rounded-xl bg-gray-900 text-white py-3 hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full rounded-xl bg-[#11b981] text-white py-3 hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {addingCategory ? (
               <>
@@ -1755,7 +1908,7 @@ function CategoryRow({
           <select
             defaultValue={category.typeScope}
             onChange={(e) => onUpdate(category.id, { typeScope: e.target.value as any })}
-            className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-xl border border-gray-200 px-3 py-3 bg-surface focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             <option value="expense">Pengeluaran</option>
             <option value="income">Pemasukan</option>
@@ -1855,12 +2008,12 @@ function DataManagement({
       <div className="grid grid-cols-2 gap-3">
         <button
           onClick={exportToCSV}
-          className="px-4 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 active:bg-green-800 min-h-[48px] font-medium transition-colors shadow-lg"
+          className="px-4 py-3 bg-[#11b981] text-white rounded-xl hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-colors shadow-lg"
         >
           📤 Export CSV
         </button>
 
-        <label className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg cursor-pointer flex items-center justify-center">
+        <label className="px-4 py-3 bg-blue-600 text-white rounded-xl hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-colors shadow-lg cursor-pointer flex items-center justify-center">
           📥 Import CSV
           <input
             type="file"
@@ -1891,7 +2044,7 @@ function DataManagement({
             showToast(error.message || "Gagal menghapus akun", "error");
           }
         }}
-        className="w-full py-3 text-white bg-red-600 rounded-xl hover:bg-red-700 active:bg-red-800 min-h-[48px] font-medium transition-colors"
+        className="w-full py-3 text-white bg-red-500 rounded-xl hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-colors"
       >
         ⚠️ Hapus Akun Permanen
       </button>
@@ -1989,7 +2142,7 @@ function ChangePasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 active:bg-blue-800 min-h-[48px] font-medium transition-colors shadow-lg disabled:opacity-50"
+        className="w-full bg-blue-600 text-white py-3 rounded-xl hover:opacity-90 active:opacity-80 min-h-[48px] font-medium transition-colors shadow-lg disabled:opacity-50"
       >
         {loading ? "Mengubah..." : "Ubah Password"}
       </button>
@@ -1999,7 +2152,7 @@ function ChangePasswordForm() {
 
 function Card({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow duration-200 p-6">
+    <div className="rounded-2xl border border-slate-200 bg-surface p-4 sm:p-6">
       {children}
     </div>
   );

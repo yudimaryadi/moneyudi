@@ -2,7 +2,51 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { 
+/* Theme tokens (RGB triplets). Dark uses muted tonal shades, not a plain inversion. */
+:root {
+  color-scheme: light;
+  --app: 246 248 251; --surface: 255 255 255;
+  --n-50: 248 250 252; --n-100: 241 245 249; --n-200: 226 232 240; --n-300: 203 213 225;
+  --n-400: 148 163 184; --n-500: 100 116 139; --n-600: 71 85 105; --n-700: 51 65 85;
+  --n-800: 30 41 59; --n-900: 15 23 42; --n-950: 2 6 23;
+  --red-50: 254 242 242; --red-100: 254 226 226; --red-200: 254 202 202; --red-300: 252 165 165;
+  --red-500: 239 68 68; --red-600: 220 38 38; --red-700: 185 28 28; --red-800: 153 27 27;
+  --green-50: 240 253 244; --green-100: 220 252 231; --green-200: 187 247 208;
+  --green-600: 22 163 74; --green-700: 21 128 61; --green-800: 22 101 52;
+  --emerald-50: 236 253 245; --emerald-100: 209 250 229; --emerald-200: 167 243 208;
+  --emerald-500: 16 185 129; --emerald-600: 5 150 105; --emerald-700: 4 120 87; --emerald-800: 6 95 70;
+  --blue-50: 239 246 255; --blue-100: 219 234 254; --blue-200: 191 219 254;
+  --blue-500: 59 130 246; --blue-600: 37 99 235; --blue-700: 29 78 216; --blue-800: 30 64 175;
+  --indigo-50: 238 242 255; --indigo-600: 79 70 229; --indigo-900: 49 46 129;
+}
+.dark {
+  color-scheme: dark; /* native date picker, select, scrollbars */
+  --app: 11 17 32; --surface: 23 32 51;
+  --n-50: 30 41 59; --n-100: 36 48 68; --n-200: 51 65 85; --n-300: 71 85 105;
+  --n-400: 115 130 152; --n-500: 148 163 184; --n-600: 176 188 204; --n-700: 203 213 225;
+  --n-800: 226 232 240; --n-900: 241 245 249; --n-950: 248 250 252;
+  --red-50: 60 24 30; --red-100: 80 30 38; --red-200: 110 40 48; --red-300: 150 60 64;
+  --red-600: 248 113 113; --red-700: 252 165 165; --red-800: 254 202 202;
+  --green-50: 20 50 34; --green-100: 22 64 42; --green-200: 30 90 55;
+  --green-600: 74 222 128; --green-700: 134 239 172; --green-800: 187 247 208;
+  --emerald-50: 16 48 40; --emerald-100: 18 62 50; --emerald-200: 24 90 70;
+  --emerald-600: 52 211 153; --emerald-700: 110 231 183; --emerald-800: 167 243 208;
+  --blue-50: 23 37 66; --blue-100: 28 48 86; --blue-200: 37 64 115;
+  --blue-700: 147 197 253; --blue-800: 191 219 254;
+  --indigo-50: 30 32 70; --indigo-900: 199 210 254;
+}
+
+@layer base {
+  /* Themed default for every form control; utilities still override */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--n-900));
+    border-color: rgb(var(--n-200));
+  }
+  ::placeholder { color: rgb(var(--n-400)); }
+}
+
+html, body {
   height: 100%; 
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -25,10 +69,11 @@ input[type="date"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-color: white;
+  background-color: rgb(var(--surface));
+  color: rgb(var(--n-900));
   border-radius: 0.75rem;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid rgb(var(--n-200));
 }
 
 input[type="date"]::-webkit-date-and-time-value {
@@ -61,9 +106,14 @@ html {
 /* Focus styles for accessibility */
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 2px solid #3b82f6;
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #11b981;
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 @keyframes slide-in-from-right {
