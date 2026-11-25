@@ -66,6 +66,8 @@ const getCustomMonthRange = (date: Date, cutoffDay: number) => {
   );
   return { from: start, to: end };
 };
+// YYYY-MM-DD in local time (toISOString shifts to UTC → off by one day in WIB)
+const ymd = (d: Date) => d.toLocaleDateString("sv-SE");
 const startOfWeek = (d: Date) => {
   const x = new Date(d);
   const day = (x.getDay() + 6) % 7;
@@ -621,6 +623,27 @@ function QuickAdd({
     }
   };
 
+  const [aiText, setAiText] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const parseAi = async () => {
+    if (!aiText.trim() || aiLoading) return;
+    setAiLoading(true);
+    try {
+      const r = await apiClient.parseText(aiText);
+      setType(r.type);
+      setAmount(r.amount);
+      if (r.categoryId) setCategoryId(r.categoryId);
+      setNote(r.description ? `${r.title} — ${r.description}` : r.title);
+      setDate(`${r.date}T12:00`);
+      setAiText("");
+      showToast("Dicek dulu, lalu tekan Simpan", "success");
+    } catch (error: any) {
+      showToast(error.message || "AI gagal memproses", "error");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const cats = categories.filter((c) =>
     type === "income"
       ? c.typeScope === "income" || c.typeScope === "both"
@@ -629,6 +652,23 @@ function QuickAdd({
 
   return (
     <Card>
+      <div className="flex gap-2 mb-4">
+        <input
+          value={aiText}
+          onChange={(e) => setAiText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && parseAi()}
+          placeholder="✨ Ketik: Beli nasi goreng 20K"
+          className="flex-1 min-w-0 rounded-xl border-2 border-emerald-200 px-4 py-3 focus:ring-2 focus:ring-[#11b981] focus:border-[#11b981] bg-emerald-50/40"
+          disabled={aiLoading}
+        />
+        <button
+          onClick={parseAi}
+          disabled={aiLoading || !aiText.trim()}
+          className="px-4 rounded-xl bg-[#11b981] text-white font-medium min-h-[48px] disabled:opacity-50"
+        >
+          {aiLoading ? "..." : "Isi"}
+        </button>
+      </div>
       <div className="flex items-center justify-between mb-4">
         <div className="inline-flex rounded-lg bg-slate-100 p-1 w-full">
           <button
@@ -934,18 +974,15 @@ const PIE_COLORS = [
 function PieChart({
   transactions,
   categories,
-  userSettings,
+  from,
+  to,
 }: {
   transactions: Tx[];
   categories: Category[];
-  userSettings: UserSettings;
+  from: Date;
+  to: Date;
 }) {
-  const { from, to, label } = useMemo(() => {
-    const r = getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay);
-    const fromStr = r.from.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-    const toStr = r.to.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
-    return { from: r.from, to: r.to, label: `${fromStr} — ${toStr}` };
-  }, [userSettings]);
+  const label = `${from.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} — ${to.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
 
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -1072,9 +1109,18 @@ function Reports({
   userSettings: UserSettings;
   onDelete: (id: string) => void;
 }) {
-  const [listFrom, setListFrom] = useState(() => getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).from.toISOString().slice(0, 10));
-  const [listTo, setListTo] = useState(() => getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).to.toISOString().slice(0, 10));
+  const [listFrom, setListFrom] = useState(() => ymd(getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).from));
+  const [listTo, setListTo] = useState(() => ymd(getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).to));
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Jump to the previous/next cut-off period (e.g. 25 Okt–24 Nov ↔ 25 Nov–24 Des)
+  const shiftPeriod = (dir: -1 | 1) => {
+    const d = new Date(`${dir < 0 ? listFrom : listTo}T12:00`);
+    d.setDate(d.getDate() + dir);
+    const r = getCustomMonthRange(d, Number(userSettings.monthlyCutoffDay) || 1);
+    setListFrom(ymd(r.from));
+    setListTo(ymd(r.to));
+  };
 
   const filteredTxs = useMemo(() => {
     let txs = transactions.filter((t) => {
@@ -1101,9 +1147,16 @@ function Reports({
 
   return (
     <section className="py-6 space-y-6">
-      <PieChart transactions={transactions} categories={categories} userSettings={userSettings} />
+      <div className="flex items-center justify-between">
+        <button onClick={() => shiftPeriod(-1)} className="px-4 py-2 rounded-xl border border-slate-200 bg-white min-h-[44px]" aria-label="Periode sebelumnya">◀</button>
+        <span className="text-sm font-medium text-slate-700">
+          {new Date(`${listFrom}T12:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" })} — {new Date(`${listTo}T12:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+        <button onClick={() => shiftPeriod(1)} className="px-4 py-2 rounded-xl border border-slate-200 bg-white min-h-[44px]" aria-label="Periode berikutnya">▶</button>
+      </div>
+      <PieChart transactions={transactions} categories={categories} from={startOfDay(new Date(`${listFrom}T12:00`))} to={endOfDay(new Date(`${listTo}T12:00`))} />
       <Card>
-        <h3 className="font-semibold text-slate-700 mb-3">Daftar Transaksi</h3>
+        <h3 className="font-semibold text-slate-700 mb-3">Log Transaksi</h3>
         <div className="flex flex-wrap gap-2 mb-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <input
