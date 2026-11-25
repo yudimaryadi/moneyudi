@@ -123,7 +123,7 @@ class ApiClient {
 
   async updateTransaction(id: string, data: {
     amount?: number;
-    description?: string;
+    note?: string;
     categoryId?: string;
     date?: string;
   }) {
@@ -140,11 +140,13 @@ class ApiClient {
   }
 
   // AI
-  async parseText(text: string): Promise<{
-    amount: number; type: 'expense' | 'income'; categoryId: string;
-    title: string; description: string; date: string;
+  async parseAi(data: { text?: string; image?: string; mimeType?: string }): Promise<{
+    items: {
+      amount: number; type: 'expense' | 'income'; categoryId: string;
+      title: string; description: string; date: string;
+    }[];
   }> {
-    return this.request('/ai/parse', { method: 'POST', body: JSON.stringify({ text }) });
+    return this.request('/ai/parse', { method: 'POST', body: JSON.stringify(data) });
   }
 
   // User Settings

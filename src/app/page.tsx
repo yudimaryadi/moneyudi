@@ -28,6 +28,7 @@ type Budget = {
   category?: Category;
 };
 type UserSettings = { id: string; monthlyCutoffDay: number };
+type AiItem = Awaited<ReturnType<typeof apiClient.parseAi>>["items"][number];
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("id-ID", {
@@ -625,22 +626,85 @@ function QuickAdd({
 
   const [aiText, setAiText] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
-  const parseAi = async () => {
-    if (!aiText.trim() || aiLoading) return;
+  const [drafts, setDrafts] = useState<AiItem[]>([]);
+  const [listening, setListening] = useState(false);
+  const noteOf = (r: AiItem) => (r.description ? `${r.title} — ${r.description}` : r.title);
+
+  const parseAi = async (payload: { text?: string; image?: string; mimeType?: string } = { text: aiText }) => {
+    if ((!payload.text?.trim() && !payload.image) || aiLoading) return;
     setAiLoading(true);
     try {
-      const r = await apiClient.parseText(aiText);
+      const { items } = await apiClient.parseAi(payload);
+      setAiText("");
+      if (items.length > 1) {
+        setDrafts(items); // banyak transaksi → tampilkan daftar untuk dicek
+        return;
+      }
+      const r = items[0];
       setType(r.type);
       setAmount(r.amount);
       if (r.categoryId) setCategoryId(r.categoryId);
-      setNote(r.description ? `${r.title} — ${r.description}` : r.title);
+      setNote(noteOf(r));
       setDate(`${r.date}T12:00`);
-      setAiText("");
       showToast("Dicek dulu, lalu tekan Simpan", "success");
     } catch (error: any) {
       showToast(error.message || "AI gagal memproses", "error");
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  // Native Web Speech API (Chrome/Edge/Safari); tombol disembunyikan bila tidak didukung
+  const SpeechRec =
+    typeof window !== "undefined" &&
+    ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+  const listen = () => {
+    if (!SpeechRec || listening) return;
+    const rec = new SpeechRec();
+    rec.lang = "id-ID";
+    rec.onresult = (e: any) => {
+      const said = e.results[0][0].transcript;
+      setAiText(said);
+      parseAi({ text: said });
+    };
+    rec.onerror = () => showToast("Suara tidak terdengar, coba lagi", "error");
+    rec.onend = () => setListening(false);
+    setListening(true);
+    rec.start();
+  };
+
+  // Kecilkan foto dulu (maks 1600px, JPEG) agar muat di batas body request
+  const scanReceipt = async (file?: File) => {
+    if (!file) return;
+    try {
+      const bmp = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      const image = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+      await parseAi({ text: aiText, image, mimeType: "image/jpeg" });
+    } catch {
+      showToast("Gagal membaca foto", "error");
+    }
+  };
+
+  const saveDrafts = async () => {
+    setLoading(true);
+    try {
+      for (const d of drafts) {
+        await onAdd({
+          amount: d.amount,
+          type: d.type,
+          categoryId: d.categoryId || undefined,
+          note: noteOf(d),
+          date: new Date(`${d.date}T12:00`).toISOString(),
+        });
+      }
+      setDrafts([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -657,18 +721,85 @@ function QuickAdd({
           value={aiText}
           onChange={(e) => setAiText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && parseAi()}
-          placeholder="✨ Ketik: Beli nasi goreng 20K"
+          placeholder={listening ? "🎤 Mendengarkan..." : "✨ Nasi 20K, kopi 15K"}
           className="flex-1 min-w-0 rounded-xl border-2 border-emerald-200 px-4 py-3 focus:ring-2 focus:ring-[#11b981] focus:border-[#11b981] bg-emerald-50/40"
           disabled={aiLoading}
         />
+        {SpeechRec && (
+          <button
+            onClick={listen}
+            disabled={aiLoading}
+            aria-label="Input suara"
+            className={`w-12 rounded-xl border-2 min-h-[48px] disabled:opacity-50 ${listening ? "border-red-300 bg-red-50 animate-pulse" : "border-slate-200"}`}
+          >
+            🎤
+          </button>
+        )}
+        <label
+          aria-label="Foto struk"
+          className={`w-12 rounded-xl border-2 border-slate-200 min-h-[48px] flex items-center justify-center cursor-pointer ${aiLoading ? "opacity-50 pointer-events-none" : ""}`}
+        >
+          📷
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              scanReceipt(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
         <button
-          onClick={parseAi}
+          onClick={() => parseAi()}
           disabled={aiLoading || !aiText.trim()}
           className="px-4 rounded-xl bg-[#11b981] text-white font-medium min-h-[48px] disabled:opacity-50"
         >
           {aiLoading ? "..." : "Isi"}
         </button>
       </div>
+      {drafts.length > 0 && (
+        <div className="mb-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/40 p-3">
+          <div className="text-sm font-medium text-slate-700 mb-2">
+            {drafts.length} transaksi terbaca — cek dulu:
+          </div>
+          <div className="divide-y divide-emerald-100">
+            {drafts.map((d, i) => {
+              const cat = categories.find((c) => c.id === d.categoryId);
+              return (
+                <div key={i} className="flex items-center gap-2 py-2">
+                  <span className="text-lg">{cat?.icon || "💰"}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{d.title}</div>
+                    <div className="text-xs text-slate-500 truncate">
+                      {cat?.name || "Tanpa Kategori"} · {new Date(`${d.date}T12:00`).toLocaleDateString("id-ID")}
+                    </div>
+                  </div>
+                  <span className={`text-sm font-semibold ${d.type === "expense" ? "text-red-600" : "text-green-600"}`}>
+                    {d.type === "expense" ? "-" : "+"}{fmt(d.amount)}
+                  </span>
+                  <button
+                    onClick={() => setDrafts(drafts.filter((_, j) => j !== i))}
+                    aria-label="Buang"
+                    className="w-8 h-8 text-slate-400 hover:text-red-600"
+                    disabled={loading}
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => setDrafts([])} disabled={loading} className="flex-1 py-2 rounded-xl border-2 border-slate-200 text-slate-600 disabled:opacity-50">
+              Batal
+            </button>
+            <button onClick={saveDrafts} disabled={loading} className="flex-1 py-2 rounded-xl bg-[#11b981] text-white font-semibold disabled:opacity-50">
+              {loading ? "Menyimpan..." : `Simpan semua (${fmt(drafts.reduce((a, d) => a + d.amount, 0))})`}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-4">
         <div className="inline-flex rounded-lg bg-slate-100 p-1 w-full">
           <button
