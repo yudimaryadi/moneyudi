@@ -127,6 +127,13 @@ export async function deleteRow(sheet: string, rowIndex: number) {
   });
 }
 
+// Only let editable fields through from a request body (never id/userId/createdAt)
+export function pick(body: any, keys: string[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const k of keys) if (body?.[k] !== undefined && body[k] !== null) out[k] = String(body[k]);
+  return out;
+}
+
 export function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }

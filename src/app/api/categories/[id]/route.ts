@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRows, updateRow, deleteRow, SHEETS } from '@/lib/sheets';
+import { getRows, updateRow, deleteRow, SHEETS, pick } from '@/lib/sheets';
 import { verifyToken } from '@/lib/auth';
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -11,7 +11,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const idx = rows.findIndex(r => r.id === params.id && r.userId === userId);
     if (idx === -1) return NextResponse.json({ message: 'Tidak ditemukan' }, { status: 404 });
 
-    const body = await req.json();
+    const body = pick(await req.json(), ["name", "icon", "typeScope"]);
     const updated = { ...rows[idx], ...body };
     await updateRow(SHEETS.CATEGORIES, idx, updated);
     return NextResponse.json(updated);
