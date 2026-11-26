@@ -30,7 +30,7 @@ export const SHEETS = {
 const HEADERS: Record<string, string[]> = {
   users: ['id', 'email', 'password', 'name', 'createdAt'],
   categories: ['id', 'userId', 'name', 'icon', 'typeScope', 'createdAt'],
-  transactions: ['id', 'userId', 'amount', 'type', 'note', 'categoryId', 'date', 'createdAt'],
+  transactions: ['id', 'userId', 'amount', 'type', 'note', 'categoryId', 'date', 'createdAt', 'details'],
   budgets: ['id', 'userId', 'amount', 'categoryId', 'period', 'createdAt'],
   settings: ['userId', 'monthlyCutoffDay'],
 };
@@ -71,7 +71,19 @@ export async function getRows(sheet: string): Promise<Record<string, string>[]> 
   const rows = res.data.values || [];
   if (rows.length < 2) return [];
 
-  const headers = rows[0];
+  let headers = rows[0];
+  // New columns appended to HEADERS (e.g. transactions.details): fill the
+  // missing header cells once so existing spreadsheets keep working.
+  const expected = HEADERS[sheet];
+  if (expected && expected.length > headers.length && headers.every((h, i) => h === expected[i])) {
+    headers = expected;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheet}!A1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [expected] },
+    });
+  }
   return rows.slice(1).map(row =>
     Object.fromEntries(headers.map((h, i) => [h, row[i] ?? '']))
   );
@@ -132,6 +144,21 @@ export function pick(body: any, keys: string[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const k of keys) if (body?.[k] !== undefined && body[k] !== null) out[k] = String(body[k]);
   return out;
+}
+
+export type Detail = { name: string; qty: number; price: number };
+
+// Validate receipt line items from a client/AI payload → clean array (max 50)
+export function cleanDetails(input: any): Detail[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .slice(0, 50)
+    .map((d: any) => ({
+      name: String(d?.name || '').trim().slice(0, 80),
+      qty: Math.max(1, Math.round(Number(d?.qty) || 1)),
+      price: Math.max(0, Math.round(Number(d?.price) || 0)),
+    }))
+    .filter((d) => d.name);
 }
 
 export function generateId() {

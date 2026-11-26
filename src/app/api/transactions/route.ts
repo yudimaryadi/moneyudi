@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRows, appendRow, SHEETS, generateId } from '@/lib/sheets';
+import { getRows, appendRow, SHEETS, generateId, cleanDetails } from '@/lib/sheets';
 import { verifyToken } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -21,8 +21,9 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { amount, type, note, categoryId, date } = await req.json();
+    const { amount, type, note, categoryId, date, details } = await req.json();
     const id = generateId();
+    const items = cleanDetails(details);
     const row = {
       id, userId,
       amount: String(amount),
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       categoryId,
       date: date || new Date().toISOString().split('T')[0],
       createdAt: new Date().toISOString(),
+      details: items.length ? JSON.stringify(items) : '',
     };
     await appendRow(SHEETS.TRANSACTIONS, row);
     return NextResponse.json(row, { status: 201 });

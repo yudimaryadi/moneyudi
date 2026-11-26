@@ -19,7 +19,20 @@ type Tx = {
   categoryId: string | null;
   note?: string | null;
   category?: Category;
+  createdAt?: string;
+  details?: string; // JSON of Detail[] (receipt line items)
 };
+type Detail = { name: string; qty: number; price: number };
+const parseDetails = (t: Tx): Detail[] => {
+  try {
+    const d = JSON.parse(t.details || "[]");
+    return Array.isArray(d) ? d : [];
+  } catch {
+    return [];
+  }
+};
+// Newest-added first (createdAt), falling back to the transaction date
+const byNewest = (a: Tx, b: Tx) => (b.createdAt || b.date).localeCompare(a.createdAt || a.date);
 type Budget = {
   id: string;
   amount: number;
@@ -67,6 +80,18 @@ const getCustomMonthRange = (date: Date, cutoffDay: number) => {
   );
   return { from: start, to: end };
 };
+// Expense total per category inside [from, to]
+const spentByCategory = (txs: Tx[], from: Date, to: Date) => {
+  const map: Record<string, number> = {};
+  for (const t of txs) {
+    const d = new Date(t.date);
+    if (t.type !== "expense" || d < from || d > to) continue;
+    const key = t.categoryId || "__none__";
+    map[key] = (map[key] || 0) + Number(t.amount);
+  }
+  return map;
+};
+
 // YYYY-MM-DD in local time (toISOString shifts to UTC → off by one day in WIB)
 const ymd = (d: Date) => d.toLocaleDateString("sv-SE");
 const startOfWeek = (d: Date) => {
@@ -268,7 +293,8 @@ function App() {
   const [tab, setTab] = useState<"home" | "reports" | "budgets" | "settings">(
     "home",
   );
-  const [receipt, setReceipt] = useState<File | null>(null); // photo from the tab bar camera button
+  const [receipt, setReceipt] = useState<File | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null); // photo from the tab bar camera button
   const [categories, setCategories] = useState<Category[]>([]);
   const [txs, setTxs] = useState<Tx[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -308,9 +334,36 @@ function App() {
           d.getMonth() === today.getMonth() &&
           d.getDate() === today.getDate()
         );
-      }),
+      }).sort(byNewest),
     [txs],
   );
+
+  const detailTx = txs.find((t) => t.id === detailId);
+
+  // Budget warnings for the current cut-off period (>= 80% of limit)
+  const period = getCustomMonthRange(new Date(), Number(userSettings.monthlyCutoffDay) || 1);
+  const budgetUsage = (all: Tx[]) => {
+    const spent = spentByCategory(all, period.from, period.to);
+    return budgets
+      .map((b) => {
+        const limit = Number(b.amount) || 0;
+        const used = spent[b.categoryId] || 0;
+        return { cat: categories.find((c) => c.id === b.categoryId), limit, used, pct: limit ? (used / limit) * 100 : 0 };
+      })
+      .filter((x) => x.limit > 0 && x.cat);
+  };
+  const budgetAlerts = budgetUsage(txs)
+    .filter((x) => x.pct >= 80)
+    .sort((a, b) => b.pct - a.pct);
+  const txsRef = useRef(txs);
+  txsRef.current = txs;
+  const warnBudget = (all: Tx[], categoryId?: string | null) => {
+    const u = budgetUsage(all).find((x) => x.cat!.id === categoryId);
+    if (!u || u.pct < 80) return;
+    const msg = `${u.cat!.icon} ${u.cat!.name}: ${fmt(u.used)} dari ${fmt(u.limit)}`;
+    if (u.pct >= 100) showToast(`Anggaran terlampaui! ${msg}`, "error");
+    else showToast(`Anggaran hampir habis (${Math.round(u.pct)}%). ${msg}`, "info");
+  };
 
   const todayExpense = useMemo(
     () =>
@@ -333,6 +386,7 @@ function App() {
     categoryId?: string;
     note?: string;
     date?: string;
+    details?: Detail[];
   }) => {
     try {
       const data = await apiClient.createTransaction({
@@ -341,11 +395,27 @@ function App() {
         categoryId: tx.categoryId || "",
         note: tx.note,
         date: tx.date,
+        details: tx.details?.length ? tx.details : undefined,
       });
       setTxs((prev) => [data, ...prev]);
+      txsRef.current = [data, ...txsRef.current]; // keep fresh for back-to-back saves
       showToast("Transaksi berhasil ditambahkan", "success");
+      if (data.type === "expense") warnBudget(txsRef.current, data.categoryId);
     } catch (error: any) {
       showToast(error.message || "Gagal menambah transaksi", "error");
+    }
+  };
+
+  const updateTx = async (id: string, patch: Partial<Tx>) => {
+    try {
+      const data = await apiClient.updateTransaction(id, patch as any);
+      setTxs((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
+      showToast("Transaksi diperbarui", "success");
+      if (data.type === "expense") warnBudget(txsRef.current.map((t) => (t.id === id ? { ...t, ...data } : t)), data.categoryId);
+      return true;
+    } catch (error: any) {
+      showToast(error.message || "Gagal memperbarui transaksi", "error");
+      return false;
     }
   };
 
@@ -394,6 +464,9 @@ function App() {
             todayIncome={todayIncome}
             onAdd={addTx}
             onDelete={delTx}
+            onOpen={(t) => setDetailId(t.id)}
+            budgetAlerts={budgetAlerts}
+            onOpenBudgets={() => setTab("budgets")}
             receipt={receipt}
             onReceiptDone={() => setReceipt(null)}
           />
@@ -404,6 +477,7 @@ function App() {
             transactions={txs}
             userSettings={userSettings}
             onDelete={delTx}
+            onOpen={(t) => setDetailId(t.id)}
           />
         )}
         {tab === "budgets" && (
@@ -425,6 +499,9 @@ function App() {
           />
         )}
       </main>
+      {detailTx && (
+        <TxDetail t={detailTx} categories={categories} onClose={() => setDetailId(null)} onDelete={delTx} onUpdate={updateTx} />
+      )}
       <TabBar
         tab={tab}
         setTab={setTab}
@@ -452,6 +529,8 @@ const ICONS = {
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
   trash: "M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6",
   x: "M18 6 6 18M6 6l12 12",
+  pencil: "M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z",
+  stop: "M6 6h12v12H6z",
   chevronLeft: "m15 18-6-6 6-6",
   chevronRight: "m9 18 6-6-6-6",
   search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3",
@@ -597,6 +676,9 @@ function Home({
   todayIncome,
   onAdd,
   onDelete,
+  onOpen,
+  budgetAlerts,
+  onOpenBudgets,
   receipt,
   onReceiptDone,
 }: {
@@ -606,12 +688,46 @@ function Home({
   todayIncome: number;
   onAdd: (t: any) => void;
   onDelete: (id: string) => void;
+  onOpen: (t: Tx) => void;
+  budgetAlerts: { cat?: Category; limit: number; used: number; pct: number }[];
+  onOpenBudgets: () => void;
   receipt: File | null;
   onReceiptDone: () => void;
 }) {
   return (
     <section className="py-6 space-y-6">
       <QuickAdd categories={categories} onAdd={onAdd} receipt={receipt} onReceiptDone={onReceiptDone} />
+      {budgetAlerts.length > 0 && (
+        <button
+          onClick={onOpenBudgets}
+          className="w-full text-left rounded-2xl border border-red-200 bg-red-50 p-4 hover:opacity-90 transition-opacity"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-semibold text-red-800">Peringatan anggaran</span>
+            <span className="text-xs text-red-700">Lihat anggaran →</span>
+          </div>
+          <ul className="space-y-3">
+            {budgetAlerts.map((a) => (
+              <li key={a.cat!.id}>
+                <div className="flex justify-between gap-2 text-sm">
+                  <span className="text-slate-800 truncate">
+                    {a.cat!.icon} {a.cat!.name}
+                  </span>
+                  <span className={`font-semibold tabular-nums ${a.pct >= 100 ? "text-red-600" : "text-slate-700"}`}>
+                    {Math.round(a.pct)}% {a.pct >= 100 ? "· lewat" : ""}
+                  </span>
+                </div>
+                <div className="h-1.5 mt-1.5 rounded-full bg-red-100 overflow-hidden">
+                  <div className={`h-full ${a.pct >= 100 ? "bg-red-500" : "bg-amber-500"}`} style={{ width: `${Math.min(100, a.pct)}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-slate-500 tabular-nums">
+                  {fmt(a.used)} dari {fmt(a.limit)}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </button>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <StatCard
           title="Pengeluaran Hari Ini"
@@ -645,6 +761,7 @@ function Home({
               t={t}
               categories={categories}
               onDelete={onDelete}
+              onOpen={onOpen}
             />
           ))}
         </div>
@@ -665,6 +782,7 @@ function QuickAdd({
   onReceiptDone: () => void;
 }) {
   const [amount, setAmount] = useState<number>(0);
+  const [details, setDetails] = useState<Detail[]>([]); // receipt line items from AI
   const [type, setType] = useState<"expense" | "income">("expense");
   const [categoryId, setCategoryId] = useState<string>("");
   const [note, setNote] = useState("");
@@ -703,10 +821,12 @@ function QuickAdd({
         categoryId: categoryId || undefined,
         note: note || undefined,
         date: new Date(date).toISOString(),
+        details,
       });
 
       setAmount(0);
       setNote("");
+      setDetails([]);
       setDate(() => {
         const now = new Date();
         const pad = (n: number) => n.toString().padStart(2, "0");
@@ -744,6 +864,7 @@ function QuickAdd({
       setAmount(r.amount);
       if (r.categoryId) setCategoryId(r.categoryId);
       setNote(noteOf(r));
+      setDetails(r.details || []);
       setDate(`${r.date}T12:00`);
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       showToast("Dicek dulu, lalu tekan Simpan", "success");
@@ -758,20 +879,62 @@ function QuickAdd({
   const SpeechRec =
     typeof window !== "undefined" &&
     ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-  const listen = () => {
-    if (!SpeechRec || listening) return;
+  // Voice-note style: tap to start, tap again to stop & send. iOS Safari often
+  // never ends recognition on its own, so stop is explicit + auto-stop after 20s.
+  const recRef = useRef<any>(null);
+  const heardRef = useRef("");
+  const autoStop = useRef<ReturnType<typeof setTimeout>>();
+  const finishListening = (rec: any) => {
+    if (recRef.current !== rec) return; // already finished (onend + fallback both call this)
+    recRef.current = null;
+    clearTimeout(autoStop.current);
+    setListening(false);
+    const said = heardRef.current.trim();
+    if (said) parseAi({ text: said });
+  };
+  const stopListening = () => {
+    const rec = recRef.current;
+    if (!rec) return;
+    try {
+      rec.stop();
+    } catch {}
+    // Fallback when the browser ignores stop(): force it after 1.5s
+    setTimeout(() => {
+      if (recRef.current !== rec) return;
+      try {
+        rec.abort();
+      } catch {}
+      finishListening(rec);
+    }, 1500);
+  };
+  const toggleListen = () => {
+    if (!SpeechRec || aiLoading) return;
+    if (recRef.current) return stopListening();
     const rec = new SpeechRec();
     rec.lang = "id-ID";
+    rec.interimResults = true; // show words while speaking
+    rec.continuous = false;
+    heardRef.current = "";
     rec.onresult = (e: any) => {
-      const said = e.results[0][0].transcript;
-      setAiText(said);
-      parseAi({ text: said });
+      heardRef.current = Array.from(e.results as ArrayLike<any>)
+        .map((r) => r[0].transcript)
+        .join(" ");
+      setAiText(heardRef.current);
     };
-    rec.onerror = () => showToast("Suara tidak terdengar, coba lagi", "error");
-    rec.onend = () => setListening(false);
+    rec.onerror = (e: any) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed")
+        showToast("Izin mikrofon ditolak. Aktifkan di pengaturan browser.", "error");
+      else if (e.error !== "aborted" && e.error !== "no-speech") showToast("Suara tidak terdengar, coba lagi", "error");
+    };
+    rec.onend = () => finishListening(rec);
+    recRef.current = rec;
+    setAiText("");
     setListening(true);
     rec.start();
+    autoStop.current = setTimeout(stopListening, 20000);
   };
+  // Release the mic if the component unmounts mid-recording
+  useEffect(() => () => recRef.current?.abort?.(), []);
 
   // Kecilkan foto dulu (maks 1600px, JPEG) agar muat di batas body request
   const scanReceipt = async (file?: File) => {
@@ -808,6 +971,7 @@ function QuickAdd({
           type: d.type,
           categoryId: d.categoryId || undefined,
           note: noteOf(d),
+          details: d.details,
           date: new Date(`${d.date}T12:00`).toISOString(),
         });
       }
@@ -854,20 +1018,28 @@ function QuickAdd({
             }
           }}
           enterKeyHint="send"
-          placeholder={listening ? "Mendengarkan… silakan bicara" : "Contoh: nasi padang 25rb, kopi 15k, parkir 2000"}
+          placeholder={listening ? "Mendengarkan… ketuk Stop jika selesai" : "Contoh: nasi padang 25rb, kopi 15k, parkir 2000"}
           className={`${field} resize-none leading-relaxed`}
           disabled={aiLoading}
         />
         <div className="flex items-center gap-2 mt-3">
           {SpeechRec && (
             <button
-              onClick={listen}
+              onClick={toggleListen}
               disabled={aiLoading}
               aria-pressed={listening}
-              className={`${chip} ${listening ? "!border-red-300 !bg-red-50 !text-red-600 animate-pulse" : ""}`}
+              aria-label={listening ? "Berhenti merekam dan proses" : "Mulai input suara"}
+              className={`${chip} ${listening ? "!border-red-300 !bg-red-50 !text-red-600" : ""}`}
             >
-              <Icon name="mic" className="w-4 h-4" />
-              <span>{listening ? "Dengar…" : "Suara"}</span>
+              {listening ? (
+                <span className="relative flex w-4 h-4 items-center justify-center" aria-hidden="true">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-60 animate-ping" />
+                  <Icon name="stop" className="relative w-3.5 h-3.5" />
+                </span>
+              ) : (
+                <Icon name="mic" className="w-4 h-4" />
+              )}
+              <span>{listening ? "Stop" : "Suara"}</span>
             </button>
           )}
           <label className={`${chip} ${aiLoading ? "opacity-50 pointer-events-none" : ""}`}>
@@ -1031,6 +1203,22 @@ function QuickAdd({
               disabled={loading}
             />
           </div>
+
+          {details.length > 0 && (
+            <div className="rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between pl-4 pr-1 py-1 border-b border-slate-100">
+                <span className="text-sm font-medium text-slate-700">Rincian dari struk ({details.length})</span>
+                <button
+                  onClick={() => setDetails([])}
+                  className="h-10 px-3 text-sm text-slate-500 hover:text-red-600"
+                  disabled={loading}
+                >
+                  Hapus rincian
+                </button>
+              </div>
+              <DetailList details={details} />
+            </div>
+          )}
         </div>
 
         <div className="mt-5 flex gap-2">
@@ -1038,6 +1226,7 @@ function QuickAdd({
             onClick={() => {
               setAmount(0);
               setNote("");
+              setDetails([]);
             }}
             className="h-12 px-5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 active:bg-slate-100 transition-colors disabled:opacity-50"
             disabled={loading}
@@ -1082,19 +1271,29 @@ function StatCard({
   );
 }
 
+// "Judul — deskripsi" (AI format) → judul; plain notes stay as-is
+const titleOf = (t: Tx) => (t.note || "").split(" — ")[0];
+const timeOf = (t: Tx) =>
+  t.createdAt ? new Date(t.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "";
+
 function TxRow({
   t,
   categories,
   onDelete,
+  onOpen,
+  onDateClick,
 }: {
   t: Tx;
   categories: Category[];
   onDelete: (id: string) => void;
+  onOpen: (t: Tx) => void;
+  onDateClick?: (date: string) => void; // reports: filter by this date; home: show time instead
 }) {
   const [deleting, setDeleting] = useState(false);
   const cat = categories.find((c) => c.id === t.categoryId) || t.category;
   const isExpense = t.type === "expense";
-  
+  const itemCount = parseDetails(t).length;
+
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (deleting) return;
@@ -1105,45 +1304,56 @@ function TxRow({
       setDeleting(false);
     }
   };
-  
-  const handleRowClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
+
   return (
-    <div className="flex items-center justify-between py-3 group" onClick={handleRowClick}>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpen(t)}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(t))}
+      aria-label={`Detail ${titleOf(t) || cat?.name || "transaksi"}`}
+      className="flex items-center justify-between gap-2 py-3 -mx-2 px-2 rounded-xl group cursor-pointer hover:bg-slate-50 active:bg-slate-100 transition-colors"
+    >
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
+        <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center text-xl flex-shrink-0" aria-hidden="true">
           {cat?.icon || "💰"}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">
-            {cat?.name || "Tanpa Kategori"}
-          </div>
-          <div className="text-xs text-gray-500 truncate">
-            {new Date(t.date).toLocaleDateString("id-ID")}{" "}
-            {t.note ? `· ${t.note}` : ""}
+          <div className="font-medium text-slate-800 truncate">{titleOf(t) || cat?.name || "Tanpa Kategori"}</div>
+          <div className="text-xs text-slate-500 truncate">
+            {cat?.name || "Tanpa Kategori"} ·{" "}
+            {onDateClick ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDateClick(ymd(new Date(t.date)));
+                }}
+                className="hover:text-emerald-600 hover:underline"
+                title="Filter tanggal ini"
+              >
+                {new Date(t.date).toLocaleDateString("id-ID")}
+              </button>
+            ) : (
+              timeOf(t) || new Date(t.date).toLocaleDateString("id-ID")
+            )}
+            {itemCount > 0 && ` · ${itemCount} barang`}
           </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <div
-          className={`font-semibold text-right ${
-            isExpense ? "text-red-600" : "text-green-600"
-          }`}
-        >
-          {isExpense ? "-" : "+"}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <div className={`font-semibold text-right tabular-nums ${isExpense ? "text-red-600" : "text-green-600"}`}>
+          {isExpense ? "−" : "+"}
           {fmt(Number(t.amount))}
         </div>
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="text-slate-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors w-11 h-11 flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
           title="Hapus"
           aria-label="Hapus transaksi"
         >
           {deleting ? (
-            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
           ) : (
             <Icon name="trash" className="w-4 h-4" />
           )}
@@ -1153,87 +1363,246 @@ function TxRow({
   );
 }
 
-function ReportTxRow({
+function DetailList({ details }: { details: Detail[] }) {
+  const total = details.reduce((a, d) => a + d.qty * d.price, 0);
+  return (
+    <ul className="divide-y divide-slate-100 text-sm">
+      {details.map((d, i) => (
+        <li key={i} className="flex items-start justify-between gap-3 px-4 py-2.5">
+          <div className="min-w-0">
+            <div className="text-slate-800 break-words">{d.name}</div>
+            <div className="text-xs text-slate-500 tabular-nums">
+              {d.qty} × {fmt(d.price)}
+            </div>
+          </div>
+          <div className="font-medium text-slate-800 tabular-nums whitespace-nowrap">{fmt(d.qty * d.price)}</div>
+        </li>
+      ))}
+      <li className="flex justify-between px-4 py-2.5 font-semibold text-slate-800">
+        <span>Subtotal barang</span>
+        <span className="tabular-nums">{fmt(total)}</span>
+      </li>
+    </ul>
+  );
+}
+
+// Bottom sheet on phones, centered dialog on desktop
+function TxDetail({
   t,
   categories,
+  onClose,
   onDelete,
-  onDateClick,
+  onUpdate,
 }: {
   t: Tx;
   categories: Category[];
+  onClose: () => void;
   onDelete: (id: string) => void;
-  onDateClick: (date: string) => void;
+  onUpdate: (id: string, patch: Partial<Tx>) => Promise<boolean>;
 }) {
-  const [deleting, setDeleting] = useState(false);
   const cat = categories.find((c) => c.id === t.categoryId) || t.category;
   const isExpense = t.type === "expense";
-  const dateStr = new Date(t.date).toISOString().slice(0, 10);
-  
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (deleting) return;
+  const details = parseDetails(t);
+  const [title, ...rest] = (t.note || "").split(" — ");
+  const description = rest.join(" — ");
+  const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState({
+    amount: Number(t.amount),
+    type: t.type,
+    categoryId: t.categoryId || "",
+    date: ymd(new Date(t.date)),
+    note: t.note || "",
+  });
+  const draftCats = categories.filter((c) => c.typeScope === "both" || c.typeScope === draft.type);
+
+  const save = async () => {
+    if (!draft.amount || draft.amount <= 0) return showToast("Nominal harus > 0", "error");
+    setSaving(true);
+    const patch: Partial<Tx> = { amount: draft.amount, type: draft.type, categoryId: draft.categoryId, note: draft.note };
+    // Keep the original time-of-day unless the date itself changed
+    if (draft.date !== ymd(new Date(t.date))) patch.date = new Date(`${draft.date}T12:00`).toISOString();
+    const ok = await onUpdate(t.id, patch);
+    setSaving(false);
+    if (ok) setEditing(false);
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+    };
+  }, []);
+
+  const del = async () => {
+    if (!confirm("Hapus transaksi ini?")) return;
     setDeleting(true);
     try {
       await onDelete(t.id);
+      onClose();
     } finally {
       setDeleting(false);
     }
   };
-  
-  const handleDateClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDateClick(dateStr);
-  };
-  
-  const handleAmountClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
+
+  const row = (label: string, value: React.ReactNode) => (
+    <div className="flex justify-between gap-4 py-2.5">
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="text-slate-800 text-right">{value}</dd>
+    </div>
+  );
+
   return (
-    <div className="flex items-center justify-between py-3 group">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
-          {cat?.icon || "💰"}
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="tx-detail-title">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="relative w-full sm:max-w-md max-h-[88vh] overflow-y-auto bg-surface rounded-t-3xl sm:rounded-2xl shadow-xl pb-[env(safe-area-inset-bottom)]">
+        <div className="sticky top-0 bg-surface/95 backdrop-blur flex items-center justify-between px-4 pt-3 pb-2 border-b border-slate-100">
+          <span className="mx-auto sm:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-slate-300" aria-hidden="true" />
+          <h2 id="tx-detail-title" className="font-semibold text-slate-800 pt-2">{editing ? "Edit transaksi" : "Detail transaksi"}</h2>
+          <button onClick={onClose} aria-label="Tutup" className="grid place-items-center w-11 h-11 -mr-2 rounded-xl text-slate-500 hover:bg-slate-100">
+            <Icon name="x" />
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">
-            {cat?.name || "Tanpa Kategori"}
+
+        {editing ? (
+          <div className="px-5 pt-4 space-y-4">
+            <div role="radiogroup" aria-label="Jenis transaksi" className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+              {([
+                ["expense", "Pengeluaran", "text-red-600"],
+                ["income", "Pemasukan", "text-green-600"],
+              ] as const).map(([val, text, color]) => (
+                <button
+                  key={val}
+                  role="radio"
+                  aria-checked={draft.type === val}
+                  onClick={() => {
+                    const ok = categories.find((c) => c.id === draft.categoryId && (c.typeScope === "both" || c.typeScope === val));
+                    const first = categories.find((c) => c.typeScope === "both" || c.typeScope === val);
+                    setDraft({ ...draft, type: val, categoryId: ok ? draft.categoryId : first?.id || "" });
+                  }}
+                  className={`h-11 rounded-lg text-sm font-semibold transition-colors ${
+                    draft.type === val ? `bg-surface dark:bg-slate-200 shadow-sm ${color}` : "text-slate-500"
+                  }`}
+                >
+                  {text}
+                </button>
+              ))}
+            </div>
+            <div>
+              <label htmlFor="ed-amount" className="block text-sm font-medium text-slate-600 mb-1.5">Nominal</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-medium">Rp</span>
+                <input
+                  id="ed-amount"
+                  inputMode="numeric"
+                  value={draft.amount ? draft.amount.toLocaleString("id-ID") : ""}
+                  onChange={(e) => setDraft({ ...draft, amount: Number(e.target.value.replace(/[^\d]/g, "")) || 0 })}
+                  className="w-full rounded-xl border border-slate-200 pl-11 pr-4 py-3 text-xl font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
+                />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="ed-cat" className="block text-sm font-medium text-slate-600 mb-1.5">Kategori</label>
+              <select
+                id="ed-cat"
+                value={draft.categoryId}
+                onChange={(e) => setDraft({ ...draft, categoryId: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
+              >
+                {draftCats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.icon} {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="ed-date" className="block text-sm font-medium text-slate-600 mb-1.5">Tanggal</label>
+              <input id="ed-date" type="date" value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="w-full" />
+            </div>
+            <div>
+              <label htmlFor="ed-note" className="block text-sm font-medium text-slate-600 mb-1.5">Catatan</label>
+              <textarea
+                id="ed-note"
+                rows={2}
+                value={draft.note}
+                onChange={(e) => setDraft({ ...draft, note: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-base resize-none focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
+              />
+            </div>
           </div>
-          <div className="text-xs text-gray-500 truncate">
-            <button
-              onClick={handleDateClick}
-              className="hover:text-blue-600 hover:underline transition-colors"
-              title="Klik untuk filter tanggal ini"
-            >
-              {new Date(t.date).toLocaleDateString("id-ID")}
-            </button>
-            {t.note ? ` · ${t.note}` : ""}
+        ) : (
+        <>
+        <div className="px-5 pt-5 pb-2 text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-slate-100 grid place-items-center text-3xl" aria-hidden="true">
+            {cat?.icon || "💰"}
+          </div>
+          <div className="mt-3 font-semibold text-slate-800 break-words">{title || cat?.name || "Transaksi"}</div>
+          {description && <p className="mt-1 text-sm text-slate-500 break-words">{description}</p>}
+          <div className={`mt-3 text-3xl font-bold tabular-nums ${isExpense ? "text-red-600" : "text-green-600"}`}>
+            {isExpense ? "−" : "+"}
+            {fmt(Number(t.amount))}
           </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <div
-          onClick={handleAmountClick}
-          className={`font-semibold text-right cursor-default ${
-            isExpense ? "text-red-600" : "text-green-600"
-          }`}
-        >
-          {isExpense ? "-" : "+"}
-          {fmt(Number(t.amount))}
-        </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="p-2 text-gray-400 hover:text-red-600 active:bg-red-50 rounded-lg transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Hapus"
-          aria-label="Hapus transaksi"
-        >
-          {deleting ? (
-            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+
+        <dl className="mx-5 my-3 divide-y divide-slate-100 text-sm border-y border-slate-100">
+          {row("Jenis", isExpense ? "Pengeluaran" : "Pemasukan")}
+          {row("Kategori", `${cat?.icon || ""} ${cat?.name || "Tanpa Kategori"}`)}
+          {row("Tanggal", new Date(t.date).toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" }))}
+          {t.createdAt &&
+            row(
+              "Dicatat",
+              new Date(t.createdAt).toLocaleString("id-ID", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+            )}
+        </dl>
+
+        {details.length > 0 && (
+          <div className="mx-5 mb-3 rounded-xl border border-slate-200">
+            <div className="px-4 py-2.5 border-b border-slate-100 text-sm font-semibold text-slate-700">
+              Rincian belanja ({details.length} barang)
+            </div>
+            <DetailList details={details} />
+          </div>
+        )}
+        </>
+        )}
+
+        <div className="px-5 pt-4 pb-5 flex gap-2">
+          {editing ? (
+            <>
+              <button onClick={() => setEditing(false)} disabled={saving} className="h-12 px-5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-slate-50 disabled:opacity-50">
+                Batal
+              </button>
+              <button onClick={save} disabled={saving} className="flex-1 h-12 rounded-xl bg-[#11b981] text-white font-semibold hover:bg-[#0f9f73] disabled:opacity-50">
+                {saving ? "Menyimpan…" : "Simpan perubahan"}
+              </button>
+            </>
           ) : (
-            <Icon name="trash" className="w-4 h-4" />
+            <>
+              <button
+                onClick={del}
+                disabled={deleting}
+                aria-label="Hapus transaksi"
+                className="h-12 px-4 rounded-xl border border-red-200 text-red-600 font-medium hover:bg-red-50 disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                <Icon name="trash" className="w-4 h-4" />
+                {deleting ? "Menghapus…" : "Hapus"}
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="flex-1 h-12 rounded-xl bg-[#11b981] text-white font-semibold hover:bg-[#0f9f73] flex items-center justify-center gap-2"
+              >
+                <Icon name="pencil" className="w-4 h-4" />
+                Edit
+              </button>
+            </>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );
@@ -1244,30 +1613,53 @@ const PIE_COLORS = [
   "#ec4899", "#14b8a6", "#f97316", "#06b6d4", "#84cc16",
 ];
 
+// Spending change badge: up = red (spent more), down = green
+function Delta({ now, prev }: { now: number; prev: number }) {
+  if (!prev && !now) return null;
+  if (!prev) return <span className="text-[11px] font-semibold text-slate-500">baru</span>;
+  const pct = Math.round(((now - prev) / prev) * 100);
+  if (pct === 0) return <span className="text-[11px] font-semibold text-slate-500">±0%</span>;
+  const up = pct > 0;
+  return (
+    <span className={`text-[11px] font-semibold tabular-nums ${up ? "text-red-600" : "text-green-600"}`}>
+      <span aria-hidden="true">{up ? "▲" : "▼"}</span>
+      <span className="sr-only">{up ? "naik" : "turun"} </span>
+      {Math.abs(pct)}%
+    </span>
+  );
+}
+
 function PieChart({
   transactions,
   categories,
   from,
   to,
+  cutoffDay,
 }: {
   transactions: Tx[];
   categories: Category[];
   from: Date;
   to: Date;
+  cutoffDay: number;
 }) {
+  // Previous cut-off period = the period containing the day before `from`
+  const prevRange = useMemo(() => {
+    const d = new Date(from);
+    d.setDate(d.getDate() - 1);
+    return getCustomMonthRange(d, cutoffDay);
+  }, [from.getTime(), cutoffDay]);
+  const prevMap = useMemo(
+    () => spentByCategory(transactions, prevRange.from, prevRange.to),
+    [transactions, prevRange],
+  );
+  const prevTotal = Object.values(prevMap).reduce((a, b) => a + b, 0);
+  const prevLabel = `${prevRange.from.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} — ${prevRange.to.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`;
   const label = `${from.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} — ${to.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}`;
 
   const [hovered, setHovered] = useState<string | null>(null);
 
   const data = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const t of transactions) {
-      if (t.type !== "expense") continue;
-      const d = new Date(t.date);
-      if (d < from || d > to) continue;
-      const key = t.categoryId || "__none__";
-      map[key] = (map[key] || 0) + Number(t.amount);
-    }
+    const map = spentByCategory(transactions, from, to);
     const total = Object.values(map).reduce((a, b) => a + b, 0);
     return Object.entries(map)
       .map(([catId, amount]) => {
@@ -1276,7 +1668,7 @@ function PieChart({
       })
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 10);
-  }, [transactions, categories, from, to]);
+  }, [transactions, categories, from.getTime(), to.getTime()]);
 
   if (data.length === 0)
     return (
@@ -1315,10 +1707,43 @@ function PieChart({
   const total = data.reduce((a, b) => a + b.amount, 0);
   const hoveredSlice = slices.find((s) => s.catId === hovered);
 
+  // Biggest increase vs previous period (only categories that existed before)
+  const mover = data
+    .filter((d) => prevMap[d.catId])
+    .map((d) => ({ ...d, change: ((d.amount - prevMap[d.catId]) / prevMap[d.catId]) * 100 }))
+    .sort((a, b) => b.change - a.change)[0];
+  const totalChange = prevTotal ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+
   return (
     <Card>
       <h3 className="font-semibold text-slate-700 mb-1">Pengeluaran per Kategori</h3>
       <p className="text-xs text-slate-500 mb-4">{label}</p>
+      <div className="mb-5 rounded-xl bg-slate-50 p-3 text-sm">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-slate-500">Total periode ini</span>
+          <span className="font-bold text-slate-800 tabular-nums">{fmt(total)}</span>
+        </div>
+        <div className="flex items-baseline justify-between gap-2 mt-1">
+          <span className="text-slate-500">Periode lalu ({prevLabel})</span>
+          <span className="text-slate-600 tabular-nums">{fmt(prevTotal)}</span>
+        </div>
+        {totalChange !== null && (
+          <p className="mt-2 text-slate-700">
+            Pengeluaran{" "}
+            <span className={`font-semibold ${totalChange > 0 ? "text-red-600" : "text-green-600"}`}>
+              {totalChange > 0 ? "naik" : totalChange < 0 ? "turun" : "sama"} {totalChange !== 0 && `${Math.abs(totalChange)}%`}
+            </span>{" "}
+            dari periode lalu.
+            {mover && mover.change >= 10 && (
+              <>
+                {" "}
+                Kenaikan terbesar: {mover.cat?.icon} <span className="font-semibold">{mover.cat?.name || "Tanpa Kategori"}</span>{" "}
+                <span className="font-semibold text-red-600">+{Math.round(mover.change)}%</span>.
+              </>
+            )}
+          </p>
+        )}
+      </div>
       <div className="flex flex-col sm:flex-row items-center gap-6">
         <div className="relative flex-shrink-0">
           <svg width={size} height={size}>
@@ -1362,7 +1787,10 @@ function PieChart({
               <span className="text-sm flex-shrink-0">{s.cat?.icon || "💰"}</span>
               <span className="text-sm text-slate-700 truncate flex-1">{s.cat?.name || "Tanpa Kategori"}</span>
               <span className="text-xs text-slate-500 flex-shrink-0">{s.pct.toFixed(1)}%</span>
-              <span className="text-xs font-medium text-slate-700 flex-shrink-0">{fmt(s.amount)}</span>
+              <span className="text-xs font-medium text-slate-700 flex-shrink-0 tabular-nums">{fmt(s.amount)}</span>
+              <span className="w-10 text-right flex-shrink-0">
+                <Delta now={s.amount} prev={prevMap[s.catId] || 0} />
+              </span>
             </div>
           ))}
         </div>
@@ -1376,11 +1804,13 @@ function Reports({
   transactions,
   userSettings,
   onDelete,
+  onOpen,
 }: {
   categories: Category[];
   transactions: Tx[];
   userSettings: UserSettings;
   onDelete: (id: string) => void;
+  onOpen: (t: Tx) => void;
 }) {
   const [listFrom, setListFrom] = useState(() => ymd(getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).from));
   const [listTo, setListTo] = useState(() => ymd(getCustomMonthRange(new Date(), userSettings.monthlyCutoffDay).to));
@@ -1407,7 +1837,7 @@ function Reports({
         return `${t.note || ""} ${cat?.name || ""} ${t.amount}`.toLowerCase().includes(q);
       });
     }
-    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || byNewest(a, b));
   }, [transactions, listFrom, listTo, searchQuery, categories]);
 
   const totalExpense = filteredTxs.filter((t) => t.type === "expense").reduce((a, b) => a + Number(b.amount), 0);
@@ -1431,7 +1861,7 @@ function Reports({
           <Icon name="chevronRight" />
         </button>
       </div>
-      <PieChart transactions={transactions} categories={categories} from={startOfDay(new Date(`${listFrom}T12:00`))} to={endOfDay(new Date(`${listTo}T12:00`))} />
+      <PieChart transactions={transactions} categories={categories} from={startOfDay(new Date(`${listFrom}T12:00`))} to={endOfDay(new Date(`${listTo}T12:00`))} cutoffDay={Number(userSettings.monthlyCutoffDay) || 1} />
       <Card>
         <h3 className="font-semibold text-slate-700 mb-3">Log Transaksi</h3>
         <div className="grid gap-2 mb-3 sm:grid-cols-[1fr_1fr_12rem]">
@@ -1486,10 +1916,206 @@ function Reports({
             </div>
           )}
           {filteredTxs.map((t) => (
-            <ReportTxRow key={t.id} t={t} categories={categories} onDelete={onDelete} onDateClick={handleDateClick} />
+            <TxRow key={t.id} t={t} categories={categories} onDelete={onDelete} onOpen={onOpen} onDateClick={handleDateClick} />
           ))}
         </div>
       </Card>
+    </section>
+  );
+}
+
+// Next-period budget suggestions from the last (up to) 3 completed cut-off periods.
+// Deterministic math; AI only adds a written analysis on request.
+const BUFFER = 1.05;
+// Compact rupiah for tight rows: 700000 → "700rb", 1250000 → "1,3jt"
+const fmtShort = (n: number) =>
+  n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, "").replace(".", ",")}jt` : n >= 1000 ? `${Math.round(n / 1000)}rb` : `${Math.round(n)}`;
+const roundUp5k = (n: number) => Math.ceil(n / 5000) * 5000;
+const shortRange = (r: { from: Date; to: Date }) =>
+  `${r.from.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} – ${r.to.toLocaleDateString("id-ID", { day: "numeric", month: "short" })}`;
+
+function BudgetAdvisor({
+  categories,
+  budgets,
+  transactions,
+  cutoffDay,
+  onUpdate,
+}: {
+  categories: Category[];
+  budgets: Budget[];
+  transactions: Tx[];
+  cutoffDay: number;
+  onUpdate: (cid: string, amt: number) => void | Promise<void>;
+}) {
+  const [applying, setApplying] = useState(false);
+  const [ai, setAi] = useState<{ summary: string; tips: string[] } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const plan = useMemo(() => {
+    const shift = (d: Date, days: number) => {
+      const x = new Date(d);
+      x.setDate(x.getDate() + days);
+      return x;
+    };
+    const current = getCustomMonthRange(new Date(), cutoffDay);
+    const next = getCustomMonthRange(shift(current.to, 1), cutoffDay);
+    // Last 3 completed periods, oldest → newest
+    const past: { from: Date; to: Date }[] = [];
+    let cursor = current.from;
+    for (let i = 0; i < 3; i++) {
+      const r = getCustomMonthRange(shift(cursor, -1), cutoffDay);
+      past.unshift(r);
+      cursor = r.from;
+    }
+    const periods = past
+      .map((r) => {
+        const byCat = spentByCategory(transactions, r.from, r.to);
+        return { ...r, byCat, total: Object.values(byCat).reduce((a, b) => a + b, 0) };
+      })
+      .filter((p) => p.total > 0); // skip months with nothing logged
+    const last = periods[periods.length - 1];
+
+    const rows = categories
+      .filter((c) => c.typeScope !== "income")
+      .map((c) => {
+        const avg = periods.length ? periods.reduce((a, p) => a + (p.byCat[c.id] || 0), 0) / periods.length : 0;
+        const limit = Number(budgets.find((b) => b.categoryId === c.id)?.amount || 0);
+        return { cat: c, last: last?.byCat[c.id] || 0, avg, suggested: roundUp5k(avg * BUFFER), limit };
+      })
+      .filter((r) => r.suggested > 0)
+      .sort((a, b) => b.suggested - a.suggested);
+
+    const currentSpent = spentByCategory(transactions, current.from, current.to);
+    return { next, periods, last, rows, current, currentSpent };
+  }, [categories, budgets, transactions, cutoffDay]);
+
+  const pending = plan.rows.filter((r) => r.limit !== r.suggested);
+  const totalSuggested = plan.rows.reduce((a, r) => a + r.suggested, 0);
+
+  const applyAll = async () => {
+    setApplying(true);
+    try {
+      for (const r of pending) await onUpdate(r.cat.id, r.suggested);
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const analyze = async () => {
+    setAiLoading(true);
+    try {
+      const name = (id: string) => categories.find((c) => c.id === id)?.name || "Tanpa Kategori";
+      const toNamed = (m: Record<string, number>) => Object.fromEntries(Object.entries(m).map(([id, v]) => [name(id), v]));
+      setAi(
+        await apiClient.insightAi({
+          periods: plan.periods.map((p) => ({ periode: shortRange(p), total: p.total, perKategori: toNamed(p.byCat) })),
+          periodeBerjalan: { periode: shortRange(plan.current), sejauhIni: toNamed(plan.currentSpent) },
+          saranAnggaranPeriodeDepan: Object.fromEntries(plan.rows.map((r) => [r.cat.name, r.suggested])),
+          anggaranSaatIni: Object.fromEntries(plan.rows.filter((r) => r.limit).map((r) => [r.cat.name, r.limit])),
+        }),
+      );
+    } catch (error: any) {
+      showToast(error.message || "Analisa AI gagal", "error");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  return (
+    <section aria-labelledby="advisor-title" className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-surface p-4 sm:p-5">
+      <div className="flex items-start gap-2 mb-1">
+        <span className="grid place-items-center w-8 h-8 rounded-lg bg-[#11b981] text-white flex-shrink-0">
+          <Icon name="chart" className="w-4 h-4" />
+        </span>
+        <div>
+          <h2 id="advisor-title" className="font-semibold text-slate-800 leading-tight">Saran anggaran periode depan</h2>
+          <p className="text-xs text-slate-500">{shortRange(plan.next)} {plan.next.to.getFullYear()}</p>
+        </div>
+      </div>
+
+      {plan.rows.length === 0 ? (
+        <p className="mt-3 text-sm text-slate-600">
+          Belum cukup data. Saran muncul setelah ada pengeluaran tercatat di 3 periode gajian terakhir.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-xs text-slate-500">
+            Dari rata-rata {plan.periods.length} periode terakhir ({plan.periods.map(shortRange).join(", ")}) + cadangan 5%.
+          </p>
+          <ul className="mt-3 divide-y divide-slate-100 rounded-xl border border-slate-200 bg-surface">
+            {plan.rows.map((r) => {
+              const applied = r.limit === r.suggested;
+              return (
+                <li key={r.cat.id} className="flex items-center gap-3 pl-3 pr-2 py-2.5">
+                  <span className="text-xl" aria-hidden="true">{r.cat.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-800 truncate">{r.cat.name}</div>
+                    <div className="text-xs text-slate-500 tabular-nums">
+                      Lalu {fmtShort(r.last)} · rata² {fmtShort(r.avg)}
+                      {r.limit > 0 && !applied && ` · kini ${fmtShort(r.limit)}`}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-slate-800 tabular-nums">{fmt(r.suggested)}</div>
+                  <button
+                    onClick={() => onUpdate(r.cat.id, r.suggested)}
+                    disabled={applied || applying}
+                    aria-label={applied ? `Saran ${r.cat.name} sudah dipakai` : `Pakai saran ${r.cat.name}`}
+                    className={`h-9 min-w-[64px] px-3 rounded-lg text-xs font-semibold transition-colors ${
+                      applied ? "text-emerald-600 bg-emerald-100" : "bg-[#11b981] text-white hover:bg-[#0f9f73]"
+                    } disabled:cursor-default`}
+                  >
+                    {applied ? "✓ Dipakai" : "Pakai"}
+                  </button>
+                </li>
+              );
+            })}
+            <li className="flex justify-between px-3 py-2.5 text-sm font-semibold text-slate-800">
+              <span>Total saran</span>
+              <span className="tabular-nums">{fmt(totalSuggested)}</span>
+            </li>
+          </ul>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={analyze}
+              disabled={aiLoading}
+              className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl border border-slate-200 bg-surface text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <span className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Icon name="sparkles" className="w-4 h-4" />
+              )}
+              Analisa AI
+            </button>
+            <button
+              onClick={applyAll}
+              disabled={applying || pending.length === 0}
+              className="flex-1 h-11 rounded-xl bg-[#11b981] text-white text-sm font-semibold hover:bg-[#0f9f73] disabled:opacity-50"
+            >
+              {applying ? "Menyimpan…" : pending.length ? `Pakai semua (${pending.length})` : "Semua saran dipakai"}
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-400">Limit yang dipakai langsung berlaku sebagai anggaran bulanan kategori itu.</p>
+
+          {ai && (
+            <div className="mt-4 rounded-xl border border-slate-200 bg-surface p-4" aria-live="polite">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 mb-2">
+                <Icon name="sparkles" className="w-4 h-4 text-emerald-600" />
+                Analisa AI
+              </div>
+              <p className="text-sm text-slate-700">{ai.summary}</p>
+              {ai.tips.length > 0 && (
+                <ul className="mt-2 space-y-1.5 text-sm text-slate-700 list-disc pl-5">
+                  {ai.tips.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </section>
   );
 }
@@ -1538,8 +2164,15 @@ function Budgets({
 
   return (
     <section className="py-6 space-y-6">
+      <BudgetAdvisor
+        categories={categories}
+        budgets={budgets}
+        transactions={transactions}
+        cutoffDay={Number(userSettings?.monthlyCutoffDay) || 1}
+        onUpdate={onUpdate}
+      />
       <div className="text-sm text-gray-500">
-        Periode:{" "}
+        Periode berjalan:{" "}
         {monthFrom.toLocaleDateString("id-ID", {
           day: "numeric",
           month: "short",
@@ -1591,8 +2224,12 @@ function Budgets({
                     type="number"
                     inputMode="numeric"
                     className="w-full rounded-xl border border-slate-200 bg-surface pl-10 pr-3 py-2.5 text-base tabular-nums focus:outline-none focus:ring-2 focus:ring-[#11b981]/40"
+                    key={limit} // refresh when a suggestion is applied
                     defaultValue={limit || ""}
-                    onBlur={(e) => onUpdate(c.id, Number(e.target.value || 0))}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value || 0);
+                      if (v !== limit) onUpdate(c.id, v); // skip no-op writes
+                    }}
                     placeholder="0"
                   />
                 </div>
