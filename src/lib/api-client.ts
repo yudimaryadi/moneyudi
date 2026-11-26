@@ -19,7 +19,12 @@ class ApiClient {
       ...options,
     };
 
-    const response = await fetch(url, config);
+    let response: Response;
+    try {
+      response = await fetch(url, config);
+    } catch {
+      throw new Error('Tidak ada koneksi internet. Coba lagi saat online.');
+    }
     
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Network error' }));
@@ -114,6 +119,7 @@ class ApiClient {
     note?: string;
     categoryId: string;
     date?: string;
+    details?: { name: string; qty: number; price: number }[];
   }) {
     return this.request('/transactions', {
       method: 'POST',
@@ -123,6 +129,7 @@ class ApiClient {
 
   async updateTransaction(id: string, data: {
     amount?: number;
+    type?: 'expense' | 'income';
     note?: string;
     categoryId?: string;
     date?: string;
@@ -144,9 +151,14 @@ class ApiClient {
     items: {
       amount: number; type: 'expense' | 'income'; categoryId: string;
       title: string; description: string; date: string;
+      details: { name: string; qty: number; price: number }[];
     }[];
   }> {
     return this.request('/ai/parse', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async insightAi(summary: object): Promise<{ summary: string; tips: string[] }> {
+    return this.request('/ai/insight', { method: 'POST', body: JSON.stringify(summary) });
   }
 
   // User Settings
